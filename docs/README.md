@@ -257,4 +257,54 @@ Host 会用 `VmReporter` 适配回调：
 
 如果你有这种用法需求，后续可以把 Host 升级为“按插件分组批处理（每组独立配置）”，但当前版本的行为就是以上事实。
 
+## 8. 开发者如何部署用于开发插件（本地调试）
+
+> 说明：插件开发的核心目标是：让你写出来的插件 `zip` 能被本地运行的 `Host.exe` 安装并成功执行。
+> 因此你需要准备一个“可运行 Host 环境”，然后反复用 Host 的“添加插件”来安装/替换你的插件 zip。
+
+### 8.1 准备可运行的 Host（两种方式）
+
+方式 A：使用你已经发布/编译好的 Host Release（最省事）
+- 直接从你的发行产物里拿到一个可运行目录（里面包含 `Host.exe`、`locales/`，以及可选的 `plugins/`）。
+
+方式 B：本地从源码发布 Host（建议用于你会修改 Host 协议/行为时）
+
+```powershell
+cd d:\Projects\ConverTool
+dotnet publish .\Host\Host.csproj -c Release -r win-x64 --self-contained false -o .\publish\win-x64
+```
+
+> Host 运行时会扫描：`AppContext.BaseDirectory/plugins/**/manifest.json`。所以你的 Host 目录下会有一个 `plugins/` 文件夹（初始可空）。
+
+### 8.2 插件开发的最小依赖
+
+- 插件实现 `PluginAbstractions.IConverterPlugin`
+- 插件提供 `manifest.json`（声明 `pluginId`、`assembly`、`type`、`supportedInputExtensions`、`supportedTargetFormats`、`configSchema`、`supportsTerminationOnCancel` 等）
+
+在你自己的插件工程里，建议引用同一个契约包：`ConverTool.PluginAbstractions`（具体 NuGet 源/Token 见 `docs/plugin-dev.md`）。
+
+### 8.3 把插件打包成 zip 并安装到本地 Host
+
+1) 按约定打包插件目录为 zip（要求：zip 解压后目录树里能找到且只能找到一个 `manifest.json`）。
+
+2) 打开本地 `Host.exe`：
+- “插件管理” → “添加插件” → 选择你的插件 zip
+
+3) Host 会把你 zip 里 `manifest.json` 所在目录的整棵目录复制到：
+`AppContext.BaseDirectory/plugins/<pluginId>/`
+
+> 因此 zip 里可以携带 ffmpeg 等外部引擎文件（放在你的插件目录结构下），只要你的插件运行时能用正确路径找到它们。
+
+### 8.4 调试建议（快速定位问题）
+
+- `KeepTemp`：建议调试时打开（保留每次任务的 `TempJobDir`），便于你检查插件产物是否写进了 `TempJobDir`。
+- `reporter.OnLog`：插件回传的日志会显示在 Host 的处理框，先用日志定位“参数是否读取正确/外部进程是否启动/输出文件是否存在”。
+
+### 8.5 开发者交付给自己的“本地测试清单”
+
+- 一个可运行 Host 目录：包含 `Host.exe` 和 `locales/`（可选 `plugins/`）
+- 你正在开发的插件 `zip`（每次修改后重新打包安装）
+- （可选）测试输入文件 + 命名模板/输出目录设置
+
+
 
