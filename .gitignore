@@ -12,3 +12,6 @@
 # Optional: Rider/VS metadata
 .DS_Store
 
+# Local checkout of the contract repo (separate git repo)
+PluginAbstractions/
+

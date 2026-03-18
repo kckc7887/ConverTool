@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PluginAbstractions\PluginAbstractions.csproj" />
+    <PackageReference Include="ConverTool.PluginAbstractions" Version="0.1.0" />
   </ItemGroup>
 
   <ItemGroup>

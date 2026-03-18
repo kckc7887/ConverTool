@@ -2,6 +2,16 @@
 
 本规范定义 ConverTool `Host` 与插件之间的协议、目录约定与关键约束。插件为 .NET DLL，供 Host 扫描、展示配置 UI，并执行转换任务。
 
+## 0.1 插件工程依赖（NuGet）
+
+插件只需要引用 `PluginAbstractions` 契约。推荐通过 NuGet 引用：
+
+- 包名：`ConverTool.PluginAbstractions`
+- 版本：建议与 Host 版本保持一致（当前示例为 `0.1.0`）
+- NuGet 源（GitHub Packages）：`https://nuget.pkg.github.com/<你的GitHub用户名或组织>/index.json`
+
+然后在代码中实现 `PluginAbstractions.IConverterPlugin`，并提供 `manifest.json` 等元信息。
+
 ## 1. 核心职责与执行边界
 
 1. Host 负责：
