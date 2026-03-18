@@ -8,9 +8,11 @@
 
 - 包名：`ConverTool.PluginAbstractions`
 - 版本：建议与 Host 版本保持一致（当前示例为 `0.1.0`）
-- NuGet 源（nuget.org）：`https://api.nuget.org/v3/index.json`
+- NuGet 源（GitHub Packages）：`https://nuget.pkg.github.com/<你的GitHub用户名或组织>/index.json`
 
 然后在代码中实现 `PluginAbstractions.IConverterPlugin`，并提供 `manifest.json` 等元信息。
+
+> 说明：GitHub Packages 的 NuGet 源通常需要认证。开发者需要准备带 `read:packages` 权限的 GitHub Token，并在本机通过 `dotnet nuget add source` 配置凭据。
 
 ## 1. 核心职责与执行边界
 
