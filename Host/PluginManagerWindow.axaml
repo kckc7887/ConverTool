@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Host.ViewModels"
+        mc:Ignorable="d"
+        d:DesignWidth="720"
+        d:DesignHeight="520"
+        x:Class="Host.PluginManagerWindow"
+        x:DataType="vm:PluginManagerViewModel"
+        Title="{Binding Title}">
+
+  <DockPanel Margin="24" LastChildFill="True">
+    <!-- 工具栏 -->
+    <Border DockPanel.Dock="Top" Padding="0,0,0,16" Margin="0,0,0,12"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <Button Content="{Binding RefreshLabel}" Classes="secondary" Command="{Binding RefreshCommand}" />
+        <Button Content="{Binding AddLabel}" Classes="primary" Click="OnAddPlugin" />
+        <Button Content="{Binding DeleteLabel}" Classes="secondary"
+                Command="{Binding DeleteSelectedCommand}"
+                IsEnabled="{Binding CanDelete}" />
+        <TextBlock Opacity="0.75" VerticalAlignment="Center" Margin="12,0,0,0"
+                   Text="{Binding Hint}" />
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,12"
+               Text="{Binding StatusMessage}"
+               TextWrapping="Wrap"
+               IsVisible="{Binding HasStatusMessage}"
+               Foreground="{DynamicResource SystemControlErrorBrush}" />
+
+    <Border Classes="card">
+      <Grid RowDefinitions="Auto,*" ColumnDefinitions="*">
+        <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding ListHeader}"
+                   Margin="0,0,0,14"
+                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Plugins}"
+                 SelectedItem="{Binding Selected, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:PluginItemVm">
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                <TextBlock FontWeight="SemiBold" Text="{Binding PluginId}" />
+                <TextBlock Grid.Column="1" Opacity="0.8" FontSize="14" Text="{Binding Version}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Opacity="0.8" FontSize="14"
+                           Text="{Binding Summary}" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
+  </DockPanel>
+</Window>

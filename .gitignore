@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.vs/
+.vscode/
+.idea/
+
+*.user
+*.suo
+*.cache
+*.log
+
+# Optional: Rider/VS metadata
+.DS_Store
+

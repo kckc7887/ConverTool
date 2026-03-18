@@ -1,0 +1,231 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- 现代轻盈活力风格 - Modern Light Energetic -->
+
+  <Styles.Resources>
+    <FontFamily x:Key="AppFontFamily">avares://Avalonia.Fonts.Inter#Inter</FontFamily>
+    <FontFamily x:Key="MonospaceFontFamily">Consolas, monospace</FontFamily>
+
+    <Thickness x:Key="PagePadding">24</Thickness>
+    <CornerRadius x:Key="CardCornerRadius">16</CornerRadius>
+    <CornerRadius x:Key="ControlCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="ButtonCornerRadius">10</CornerRadius>
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinWidth" Value="960" />
+    <Setter Property="MinHeight" Value="720" />
+    <Setter Property="TransparencyLevelHint" Value="Mica, AcrylicBlur, Blur" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+  </Style>
+
+  <!-- TextBox: 轻盈边框，圆角 -->
+  <Style Selector="TextBox">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
+  <Style Selector="TextBox:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <Style Selector="TextBox:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+
+  <!-- ComboBox -->
+  <Style Selector="ComboBox">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ComboBox:focus">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+  </Style>
+
+  <Style Selector="ComboBox:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <!-- Button 基础 -->
+  <Style Selector="Button">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="CornerRadius" Value="{DynamicResource ButtonCornerRadius}" />
+    <Setter Property="Padding" Value="18,10" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button:pressed">
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
+  <Style Selector="Button:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+
+  <!-- Primary 主按钮 - 活力蓝 -->
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Opacity" Value="0.92" />
+  </Style>
+
+  <Style Selector="Button.primary:pressed">
+    <Setter Property="Opacity" Value="0.85" />
+  </Style>
+
+  <!-- Secondary 次要按钮 - 轻盈描边 -->
+  <Style Selector="Button.secondary">
+    <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+
+  <Style Selector="Button.secondary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <Style Selector="Button.secondary:pressed">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeLowBrush}" />
+  </Style>
+
+  <!-- ProgressBar - 圆润活力 -->
+  <Style Selector="ProgressBar">
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+
+  <!-- Slider -->
+  <Style Selector="Slider">
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Value" Duration="0:0:0.1" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- CheckBox -->
+  <Style Selector="CheckBox">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+
+  <!-- 只读 TextBox (日志等) -->
+  <Style Selector="TextBox[IsReadOnly=True]">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+
+  <!-- Card 卡片 - 轻盈悬浮感 -->
+  <Style Selector="Border.card">
+    <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+    <Setter Property="Padding" Value="20" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BoxShadow" Value="0 4 20 0 #0d000000" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Border.card:pointerover">
+    <Setter Property="BoxShadow" Value="0 8 32 0 #15000000" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+  </Style>
+
+  <!-- Log 文本框 -->
+  <Style Selector="TextBox.log-box">
+    <Setter Property="FontFamily" Value="{DynamicResource MonospaceFontFamily}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="TextWrapping" Value="NoWrap" />
+  </Style>
+
+  <!-- 帮助文字 -->
+  <Style Selector="TextBlock.help-text">
+    <Setter Property="Opacity" Value="0.8" />
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- 区块标题 -->
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- ListBox 插件列表 -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBoxItem">
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="ListBoxItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+  </Style>
+
+  <Style Selector="ListBoxItem:selected">
+    <Setter Property="Background" Value="{DynamicResource SystemControlHighlightAccentBrush}" />
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+</Styles>

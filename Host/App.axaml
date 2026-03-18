@@ -1,0 +1,34 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
+             x:Class="Host.App"
+             RequestedThemeVariant="Default">
+
+    <Application.Styles>
+        <FluentTheme>
+            <FluentTheme.Palettes>
+                <!-- 浅色：柔和灰，不扎眼 -->
+                <fluent:ColorPaletteResources x:Key="Light"
+                    RegionColor="#F0F0F0"
+                    AltHigh="#FAFAFA"
+                    AltMedium="#F5F5F5"
+                    AltMediumLow="#EBEBEB"
+                    ChromeMediumLow="#EBEBEB"
+                    ChromeBlackHigh="#F0F0F0"
+                    ChromeBlackMedium="#FAFAFA"
+                    ChromeBlackLow="#F5F5F5" />
+                <!-- 深色：背景 #202020 -->
+                <fluent:ColorPaletteResources x:Key="Dark"
+                    RegionColor="#202020"
+                    AltHigh="#2D2D2D"
+                    AltMedium="#383838"
+                    AltMediumLow="#404040"
+                    ChromeMediumLow="#2D2D2D"
+                    ChromeBlackHigh="#202020"
+                    ChromeBlackMedium="#2D2D2D"
+                    ChromeBlackLow="#383838" />
+            </FluentTheme.Palettes>
+        </FluentTheme>
+        <StyleInclude Source="avares://Host/Styles/Win11.axaml" />
+    </Application.Styles>
+</Application>

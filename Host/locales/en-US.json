@@ -1,0 +1,48 @@
+{
+  "strings": {
+    "host/app/title": "ConverTool",
+    "host/app/language": "Language",
+    "host/app/addPlugin": "Add plugin",
+    "host/app/managePlugins": "Plugins",
+    "host/section/input": "Input",
+    "host/section/config": "Config",
+    "host/section/process": "Process",
+    "host/section/output": "Output",
+    "host/input/placeholder": "Drop files here or click to add...",
+    "host/input/browse": "Browse...",
+    "host/config/placeholder": "Config UI is provided by plugins.",
+    "host/config/noPluginHint": "You need to add a plugin first. Click “Add plugin” in the top-right.",
+    "host/process/placeholder": "Logs and progress will appear here.",
+    "host/output/placeholder": "Converted files will be listed here.",
+    "host/input/pathLabel": "Input paths (one per line)",
+    "host/process/start": "Start",
+    "host/output/dirLabel": "Output folder",
+    "host/output/browse": "Browse...",
+    "host/output/useInputDir": "Use original file location",
+    "host/output/templateLabel": "Naming template ({base}, {ext}, {index})"
+    ,
+    "host/process/progressLabel": "Progress"
+    ,
+    "host/process/batchLabel": "Files"
+    ,
+    "host/config/targetFormat": "Convert to"
+    ,
+    "host/process/keepTemp": "Keep temp files on disk (for troubleshooting)"
+    ,
+    "host/process/pause": "Pause",
+    "host/process/stop": "Stop",
+    "host/process/parallelEnable": "Enable parallel processing (experimental)"
+    ,
+    "host/process/parallelism": "Parallelism"
+    ,
+    "host/output/templateHelp": "Template placeholders:\n- {base}: original filename without extension (e.g. \"input\")\n- {ext}: target extension (e.g. \"mp4\")\n- {index}: sequence number in batch (starts at 1)\n\nExample: {base}.{ext} → input.mp4"
+    ,
+    "host/pluginManager/title": "Plugin manager",
+    "host/pluginManager/refresh": "Refresh",
+    "host/pluginManager/add": "Add",
+    "host/pluginManager/delete": "Delete",
+    "host/pluginManager/listHeader": "Installed plugins",
+    "host/pluginManager/hint": "Delete removes plugins/<pluginId>/ directory."
+  }
+}
+
