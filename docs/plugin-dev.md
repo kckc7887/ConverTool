@@ -8,7 +8,7 @@
 
 - 包名：`ConverTool.PluginAbstractions`
 - 版本：建议与 Host 版本保持一致（当前示例为 `0.1.0`）
-- NuGet 源（GitHub Packages）：`https://nuget.pkg.github.com/<你的GitHub用户名或组织>/index.json`
+- NuGet 源（nuget.org）：`https://api.nuget.org/v3/index.json`
 
 然后在代码中实现 `PluginAbstractions.IConverterPlugin`，并提供 `manifest.json` 等元信息。
 
