@@ -1,0 +1,55 @@
+{
+  "pluginId": "ffmpeg.video.transcoder",
+  "version": "0.1.0",
+  "author": "Chnynnya",
+  "assembly": "FfmpegVideoTranscoder.dll",
+  "type": "FfmpegVideoTranscoder.VideoTranscoderPlugin",
+  "supportsTerminationOnCancel": true,
+  "titleKey": "plugin/ffmpeg.video.transcoder/title",
+  "descriptionKey": "plugin/ffmpeg.video.transcoder/description",
+  "supportedInputExtensions": [
+    "mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v", "ts", "mts", "m2ts", "3gp", "ogv"
+  ],
+  "supportedTargetFormats": [
+    { "id": "mp4",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mp4" },
+    { "id": "mkv",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mkv" },
+    { "id": "mov",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mov" },
+    { "id": "webm", "displayNameKey": "plugin/ffmpeg.video.transcoder/target/webm" },
+    { "id": "avi",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/avi" }
+  ],
+  "configSchema": {
+    "sections": [
+      {
+        "id": "basic",
+        "titleKey": "plugin/ffmpeg.video.transcoder/section/basic",
+        "collapsedByDefault": false,
+        "fields": [
+          {
+            "key": "crf",
+            "type": "Number",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/crf/label",
+            "helpKey": "plugin/ffmpeg.video.transcoder/field/crf/help",
+            "defaultValue": 23,
+            "range": { "min": 0, "max": 51, "step": 1 }
+          },
+          {
+            "key": "hw",
+            "type": "Select",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/label",
+            "helpKey": "plugin/ffmpeg.video.transcoder/field/hw/help",
+            "defaultValue": "cpu",
+            "options": [
+              { "id": "cpu", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu" },
+              { "id": "nvidia", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia" },
+              { "id": "amd", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/amd" },
+              { "id": "intel", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/intel" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "supportedLocales": [ "en-US", "zh-CN" ],
+  "i18n": { "localesFolder": "locales" }
+}
+

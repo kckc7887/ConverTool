@@ -30,6 +30,8 @@ plugins-src/**/dist/
 # Unified plugin runtime/build outputs
 plugins/
 plugins-dist/
+!Host/plugins/
+!Host/plugins/**
 
 # Local archive for old versions
 old-versions/

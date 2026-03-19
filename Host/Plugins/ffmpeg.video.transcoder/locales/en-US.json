@@ -1,0 +1,26 @@
+{
+  "strings": {
+    "plugin/ffmpeg.video.transcoder/title": "FFmpeg Video Transcoder",
+    "plugin/ffmpeg.video.transcoder/description": "Transcode videos using FFmpeg (CRF + HW acceleration).",
+
+    "plugin/ffmpeg.video.transcoder/section/basic": "Basic",
+
+    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4 (most compatible)",
+    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV (flexible container)",
+    "plugin/ffmpeg.video.transcoder/target/mov": "MOV (Apple workflow)",
+    "plugin/ffmpeg.video.transcoder/target/webm": "WebM (web-first)",
+    "plugin/ffmpeg.video.transcoder/target/avi": "AVI (legacy devices)",
+
+    "plugin/ffmpeg.video.transcoder/field/crf/label": "CRF / Quality",
+    "plugin/ffmpeg.video.transcoder/field/crf/help": "Lower is better quality and larger file. Typical: 18-28 (CPU/x264). For GPU encoders, CRF is mapped to the closest quality parameter.",
+
+    "plugin/ffmpeg.video.transcoder/field/hw/label": "Hardware acceleration",
+    "plugin/ffmpeg.video.transcoder/field/hw/help": "Select encoder backend. Requires matching GPU and FFmpeg build with the encoder enabled.",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "CPU (libx264)",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA (NVENC)",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD (AMF)",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel (QSV)"
+  }
+}
+
+

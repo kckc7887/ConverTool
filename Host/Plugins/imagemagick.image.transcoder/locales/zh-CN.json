@@ -1,0 +1,19 @@
+﻿{
+  "strings": {
+    "plugin/imagemagick.image.transcoder/title": "ImageMagick 鍥剧墖杞崲鍣?,
+    "plugin/imagemagick.image.transcoder/description": "浣跨敤 ImageMagick锛坢agick 鍛戒护琛岋級杩涜鍥剧墖鏍煎紡杞崲銆?,
+
+    "plugin/imagemagick.image.transcoder/target/png": "PNG锛堟棤鎹?閫忔槑锛?,
+    "plugin/imagemagick.image.transcoder/target/jpg": "JPG锛堜綋绉洿灏忥級",
+    "plugin/imagemagick.image.transcoder/target/jpeg": "JPEG锛堜綋绉洿灏忥級",
+    "plugin/imagemagick.image.transcoder/target/bmp": "BMP锛堟棤鍘嬬缉锛?,
+    "plugin/imagemagick.image.transcoder/target/gif": "GIF锛堝吋瀹规€ч珮锛?,
+    "plugin/imagemagick.image.transcoder/target/tif": "TIFF锛堝嵃鍒?瀛樻。锛?,
+    "plugin/imagemagick.image.transcoder/target/tiff": "TIFF锛堝嵃鍒?瀛樻。锛?,
+    "plugin/imagemagick.image.transcoder/target/webp": "WebP锛堢綉椤垫洿鐪佺┖闂达級",
+    "plugin/imagemagick.image.transcoder/target/avif": "AVIF锛堥珮鍘嬬缉鐜囷級",
+    "plugin/imagemagick.image.transcoder/target/ico": "ICO锛堝浘鏍囨枃浠讹級"
+  }
+}
+
+
