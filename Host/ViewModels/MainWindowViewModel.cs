@@ -100,7 +100,7 @@ public sealed class MainWindowViewModel : ObservableObject
         OutputBrowseLabel = _hostI18n.T("host/output/browse");
         InputPathLabel = _hostI18n.T("host/input/pathLabel");
         ConfigPlaceholder = HasPlugins
-            ? _hostI18n.T("host/config/placeholder")
+            ? _hostI18n.T("host/config/activateByInput")
             : _hostI18n.T("host/config/noPluginHint");
         AddPluginLabel = _hostI18n.T("host/app/addPlugin");
         ManagePluginsLabel = _hostI18n.T("host/app/managePlugins");
@@ -117,9 +117,9 @@ public sealed class MainWindowViewModel : ObservableObject
         PauseLabel = _hostI18n.T("host/process/pause");
         PauseTooltipLabel = _hostI18n.T("host/process/pauseTooltip");
         StopLabel = _hostI18n.T("host/process/stop");
-        ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
         EnableParallelLabel = _hostI18n.T("host/process/parallelEnable");
         ParallelismLabel = _hostI18n.T("host/process/parallelism");
+        ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
 
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         OutputDir = string.IsNullOrWhiteSpace(docs)
@@ -279,6 +279,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     // Host will set this from code-behind (TopLevel required for picker).
     public TopLevel? TopLevel { get; set; }
+    public Func<string, Task>? ShowErrorDialogAsync { get; set; }
 
     private CancellationTokenSource? _runCts;
     private readonly ManualResetEventSlim _pauseGate = new(initialState: true);
@@ -315,7 +316,9 @@ public sealed class MainWindowViewModel : ObservableObject
         OutputBrowseLabel = _hostI18n.T("host/output/browse");
         InputPathLabel = _hostI18n.T("host/input/pathLabel");
         ConfigPlaceholder = HasPlugins
-            ? _hostI18n.T("host/config/placeholder")
+            ? (HasAnyInputPaths()
+                ? _hostI18n.T("host/config/placeholder")
+                : _hostI18n.T("host/config/activateByInput"))
             : _hostI18n.T("host/config/noPluginHint");
         NoPluginHintLabel = _hostI18n.T("host/config/noPluginHint");
         AddPluginLabel = _hostI18n.T("host/app/addPlugin");
@@ -332,6 +335,8 @@ public sealed class MainWindowViewModel : ObservableObject
         PauseLabel = _hostI18n.T("host/process/pause");
         PauseTooltipLabel = _hostI18n.T("host/process/pauseTooltip");
         StopLabel = _hostI18n.T("host/process/stop");
+        EnableParallelLabel = _hostI18n.T("host/process/parallelEnable");
+        ParallelismLabel = _hostI18n.T("host/process/parallelism");
         ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
 
         RaisePropertyChanged(nameof(LanguageLabel));
@@ -672,10 +677,17 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(firstInput))
         {
-            return _catalog.Plugins.FirstOrDefault();
+            return null;
         }
 
         return PluginRouter.RouteByInputPath(_catalog, firstInput) ?? _catalog.Plugins.FirstOrDefault();
+    }
+
+    private bool HasAnyInputPaths()
+    {
+        return (InputPaths ?? "")
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Any(s => !string.IsNullOrWhiteSpace(s));
     }
 
     private async Task StartAsync()
@@ -1204,7 +1216,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var files = await TopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            AllowMultiple = false
+            AllowMultiple = false,
+            Title = _hostI18n.T("host/pluginManager/addPickerTitle"),
+            FileTypeFilter =
+            [
+                new FilePickerFileType("ConverTool plugin (.zip)") { Patterns = ["*.zip"] },
+            ],
         });
 
         var zip = files.FirstOrDefault();
@@ -1217,7 +1234,12 @@ public sealed class MainWindowViewModel : ObservableObject
         var result = await PluginZipInstaller.InstallFromZipAsync(zipPath, AppContext.BaseDirectory);
         if (!result.Ok)
         {
-            AppendLog("[host] " + result.Message);
+            var msg = LocalizeInstallError(result);
+            AppendLog("[host] " + msg);
+            if (ShowErrorDialogAsync is not null)
+            {
+                await ShowErrorDialogAsync(msg);
+            }
             return;
         }
 
@@ -1237,7 +1259,9 @@ public sealed class MainWindowViewModel : ObservableObject
         AppServices.Plugins = _catalog;
         HasPlugins = _catalog.Plugins.Count > 0;
         ConfigPlaceholder = HasPlugins
-            ? _hostI18n.T("host/config/placeholder")
+            ? (HasAnyInputPaths()
+                ? _hostI18n.T("host/config/placeholder")
+                : _hostI18n.T("host/config/activateByInput"))
             : _hostI18n.T("host/config/noPluginHint");
         RaisePropertyChanged(nameof(ConfigPlaceholder));
 
@@ -1435,6 +1459,31 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             return fallback;
         }
+    }
+
+    private string LocalizeInstallError(PluginZipInstaller.Result result)
+    {
+        var key = result.ErrorCode switch
+        {
+            PluginZipInstaller.ErrorCodes.InvalidZip => "host/pluginInstall/error/invalidZip",
+            PluginZipInstaller.ErrorCodes.ManifestNotFound => "host/pluginInstall/error/manifestNotFound",
+            PluginZipInstaller.ErrorCodes.ManifestNotUnique => "host/pluginInstall/error/manifestNotUnique",
+            PluginZipInstaller.ErrorCodes.ManifestInvalid => "host/pluginInstall/error/manifestInvalid",
+            PluginZipInstaller.ErrorCodes.MissingTerminationSupport => "host/pluginInstall/error/missingTermination",
+            PluginZipInstaller.ErrorCodes.FilesInUse => "host/pluginInstall/error/filesInUse",
+            PluginZipInstaller.ErrorCodes.FilesLocked => "host/pluginInstall/error/filesLocked",
+            _ => "host/pluginInstall/error/unknown",
+        };
+
+        var msg = _hostI18n.T(key);
+        if (!string.IsNullOrWhiteSpace(result.Details) &&
+            (result.ErrorCode == PluginZipInstaller.ErrorCodes.Unknown ||
+             result.ErrorCode == PluginZipInstaller.ErrorCodes.ManifestNotUnique))
+        {
+            msg += Environment.NewLine + result.Details;
+        }
+
+        return msg;
     }
 }
 

@@ -24,6 +24,7 @@ public sealed class PluginManagerViewModel : ObservableObject
         DeleteLabel = _i18n.T("host/pluginManager/delete");
         ListHeader = _i18n.T("host/pluginManager/listHeader");
         Hint = _i18n.T("host/pluginManager/hint");
+        AuthorLabel = _i18n.T("host/pluginManager/author");
 
         RefreshCommand = new AsyncCommand(RefreshAsync);
         DeleteSelectedCommand = new AsyncCommand(DeleteSelectedAsync, () => Selected is not null);
@@ -42,6 +43,7 @@ public sealed class PluginManagerViewModel : ObservableObject
     public string DeleteLabel { get; private set; } = "";
     public string ListHeader { get; private set; } = "";
     public string Hint { get; private set; } = "";
+    public string AuthorLabel { get; private set; } = "";
 
     private string _statusMessage = "";
     public string StatusMessage
@@ -90,6 +92,7 @@ public sealed class PluginManagerViewModel : ObservableObject
         DeleteLabel = _i18n.T("host/pluginManager/delete");
         ListHeader = _i18n.T("host/pluginManager/listHeader");
         Hint = _i18n.T("host/pluginManager/hint");
+        AuthorLabel = _i18n.T("host/pluginManager/author");
 
         RaisePropertyChanged(nameof(Title));
         RaisePropertyChanged(nameof(RefreshLabel));
@@ -97,6 +100,7 @@ public sealed class PluginManagerViewModel : ObservableObject
         RaisePropertyChanged(nameof(DeleteLabel));
         RaisePropertyChanged(nameof(ListHeader));
         RaisePropertyChanged(nameof(Hint));
+        RaisePropertyChanged(nameof(AuthorLabel));
     }
 
     private Task RefreshAsync()
@@ -147,6 +151,8 @@ public sealed class PluginManagerViewModel : ObservableObject
                 Plugins.Add(new PluginItemVm(
                     PluginId: manifest.PluginId,
                     Version: manifest.Version,
+                    Author: string.IsNullOrWhiteSpace(manifest.Author) ? "UnKown" : manifest.Author.Trim(),
+                    AuthorText: $"{AuthorLabel}: {(string.IsNullOrWhiteSpace(manifest.Author) ? "UnKown" : manifest.Author.Trim())}",
                     PluginDir: pluginDir,
                     Title: title,
                     Description: description,
@@ -191,29 +197,59 @@ public sealed class PluginManagerViewModel : ObservableObject
         return RefreshAsync();
     }
 
-    public async Task InstallFromZipAsync(string zipPath)
+    public async Task<string?> InstallFromZipAsync(string zipPath)
     {
         StatusMessage = "";
         if (string.IsNullOrWhiteSpace(zipPath) || !zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            StatusMessage = _i18n.T("host/pluginManager/selectZip");
+            StatusMessage = _i18n.T("host/pluginInstall/error/invalidZip");
             await RefreshAsync();
-            return;
+            return StatusMessage;
         }
 
         var result = await PluginZipInstaller.InstallFromZipAsync(zipPath, AppContext.BaseDirectory);
         if (!result.Ok)
         {
-            StatusMessage = result.Message;
+            StatusMessage = LocalizeInstallError(result);
+            await RefreshAsync();
+            return StatusMessage;
         }
 
         await RefreshAsync();
+        return null;
+    }
+
+    private string LocalizeInstallError(PluginZipInstaller.Result result)
+    {
+        var key = result.ErrorCode switch
+        {
+            PluginZipInstaller.ErrorCodes.InvalidZip => "host/pluginInstall/error/invalidZip",
+            PluginZipInstaller.ErrorCodes.ManifestNotFound => "host/pluginInstall/error/manifestNotFound",
+            PluginZipInstaller.ErrorCodes.ManifestNotUnique => "host/pluginInstall/error/manifestNotUnique",
+            PluginZipInstaller.ErrorCodes.ManifestInvalid => "host/pluginInstall/error/manifestInvalid",
+            PluginZipInstaller.ErrorCodes.MissingTerminationSupport => "host/pluginInstall/error/missingTermination",
+            PluginZipInstaller.ErrorCodes.FilesInUse => "host/pluginInstall/error/filesInUse",
+            PluginZipInstaller.ErrorCodes.FilesLocked => "host/pluginInstall/error/filesLocked",
+            _ => "host/pluginInstall/error/unknown",
+        };
+
+        var msg = _i18n.T(key);
+        if (!string.IsNullOrWhiteSpace(result.Details) &&
+            (result.ErrorCode == PluginZipInstaller.ErrorCodes.Unknown ||
+             result.ErrorCode == PluginZipInstaller.ErrorCodes.ManifestNotUnique))
+        {
+            msg += Environment.NewLine + result.Details;
+        }
+
+        return msg;
     }
 }
 
 public sealed record PluginItemVm(
     string PluginId,
     string Version,
+    string Author,
+    string AuthorText,
     string PluginDir,
     string Title,
     string Description,

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Host.Plugins;
@@ -16,7 +17,19 @@ public static class PluginZipInstaller
         PropertyNameCaseInsensitive = true
     };
 
-    public readonly record struct Result(bool Ok, string Message, string? PluginId);
+    public static class ErrorCodes
+    {
+        public const string InvalidZip = "INVALID_ZIP";
+        public const string ManifestNotFound = "MANIFEST_NOT_FOUND";
+        public const string ManifestNotUnique = "MANIFEST_NOT_UNIQUE";
+        public const string ManifestInvalid = "MANIFEST_INVALID";
+        public const string MissingTerminationSupport = "MISSING_TERMINATION_SUPPORT";
+        public const string FilesInUse = "FILES_IN_USE";
+        public const string FilesLocked = "FILES_LOCKED";
+        public const string Unknown = "UNKNOWN";
+    }
+
+    public readonly record struct Result(bool Ok, string ErrorCode, string? PluginId, string? Details);
 
     /// <summary>
     /// Extracts <paramref name="zipPath"/> to a temp folder, validates manifest, copies to <c>plugins/&lt;pluginId&gt;/</c>.
@@ -25,7 +38,7 @@ public static class PluginZipInstaller
     {
         if (string.IsNullOrWhiteSpace(zipPath) || !zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            return new Result(false, "Please select a .zip file.", null);
+            return new Result(false, ErrorCodes.InvalidZip, null, null);
         }
 
         var pluginsRoot = Path.Combine(baseDirectory, "plugins");
@@ -41,13 +54,12 @@ public static class PluginZipInstaller
             var manifestPaths = Directory.GetFiles(tempRoot, "manifest.json", SearchOption.AllDirectories);
             if (manifestPaths.Length == 0)
             {
-                return new Result(false, "Invalid plugin zip: manifest.json not found.", null);
+                return new Result(false, ErrorCodes.ManifestNotFound, null, null);
             }
 
             if (manifestPaths.Length != 1)
             {
-                return new Result(false,
-                    $"Invalid plugin zip: expected exactly 1 manifest.json, found {manifestPaths.Length}.", null);
+                return new Result(false, ErrorCodes.ManifestNotUnique, null, manifestPaths.Length.ToString());
             }
 
             var manifestPath = manifestPaths[0];
@@ -55,13 +67,12 @@ public static class PluginZipInstaller
             var manifest = JsonSerializer.Deserialize<PluginManifestModel>(json, ManifestJsonOptions);
             if (manifest is null || string.IsNullOrWhiteSpace(manifest.PluginId))
             {
-                return new Result(false, "Invalid plugin manifest.json.", null);
+                return new Result(false, ErrorCodes.ManifestInvalid, null, null);
             }
 
             if (!manifest.SupportsTerminationOnCancel)
             {
-                return new Result(false,
-                    $"Skip plugin '{manifest.PluginId}': requires supportsTerminationOnCancel=true.", manifest.PluginId);
+                return new Result(false, ErrorCodes.MissingTerminationSupport, manifest.PluginId, null);
             }
 
             var manifestDir = Path.GetDirectoryName(manifestPath) ?? tempRoot;
@@ -69,17 +80,25 @@ public static class PluginZipInstaller
 
             if (Directory.Exists(destDir))
             {
-                Directory.Delete(destDir, recursive: true);
+                await DeleteDirectoryWithRetryAsync(destDir).ConfigureAwait(false);
             }
 
             Directory.CreateDirectory(destDir);
             CopyDirectoryRecursive(manifestDir, destDir);
 
-            return new Result(true, "", manifest.PluginId);
+            return new Result(true, "", manifest.PluginId, null);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return new Result(false, ErrorCodes.FilesInUse, null, ex.Message);
+        }
+        catch (IOException ex)
+        {
+            return new Result(false, ErrorCodes.FilesLocked, null, ex.Message);
         }
         catch (Exception ex)
         {
-            return new Result(false, $"Install failed: {ex.GetType().Name}: {ex.Message}", null);
+            return new Result(false, ErrorCodes.Unknown, null, $"{ex.GetType().Name}: {ex.Message}");
         }
         finally
         {
@@ -110,5 +129,40 @@ public static class PluginZipInstaller
             var target = Path.Combine(destDir, rel);
             File.Copy(filePath, target, overwrite: true);
         }
+    }
+
+    private static async Task DeleteDirectoryWithRetryAsync(string dir)
+    {
+        const int maxAttempts = 8;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                if (!Directory.Exists(dir))
+                {
+                    return;
+                }
+
+                // Plugin assemblies loaded via collectible ALC may need a GC cycle
+                // before Windows releases file handles.
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+
+                Directory.Delete(dir, recursive: true);
+                return;
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(120 * attempt).ConfigureAwait(false);
+            }
+            catch (IOException) when (attempt < maxAttempts)
+            {
+                await Task.Delay(120 * attempt).ConfigureAwait(false);
+            }
+        }
+
+        // Let caller produce user-facing error message.
+        Directory.Delete(dir, recursive: true);
     }
 }

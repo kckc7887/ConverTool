@@ -11,6 +11,7 @@
     "host/input/placeholder": "拖拽文件到这里，或点击添加…",
     "host/input/browse": "浏览…",
     "host/config/placeholder": "配置界面由插件提供。",
+    "host/config/activateByInput": "输入文件以激活插件配置。",
     "host/config/noPluginHint": "呃，你得先添加插件才能使用。请点击右上角“添加插件”。",
     "host/process/placeholder": "终端日志与进度会显示在这里。",
     "host/output/placeholder": "转换结果会列在这里。",
@@ -44,10 +45,20 @@
     "host/pluginManager/add": "添加",
     "host/pluginManager/delete": "删除",
     "host/pluginManager/listHeader": "已安装插件",
+    "host/pluginManager/author": "作者",
     "host/pluginManager/hint": "删除会直接移除 plugins/<pluginId>/ 目录。",
     "host/pluginManager/pickerUnavailable": "无法打开文件选择器（StorageProvider 不可用）。请重启应用，或使用主界面顶部的“添加插件”。",
     "host/pluginManager/addPickerTitle": "选择插件 zip",
-    "host/pluginManager/selectZip": "请选择 .zip 插件包。"
+    "host/pluginManager/selectZip": "请选择 .zip 插件包。",
+    "host/dialog/errorTitle": "错误",
+    "host/pluginInstall/error/invalidZip": "请选择 .zip 插件包。",
+    "host/pluginInstall/error/manifestNotFound": "插件包无效：未找到 manifest.json。",
+    "host/pluginInstall/error/manifestNotUnique": "插件包无效：发现多个 manifest.json。",
+    "host/pluginInstall/error/manifestInvalid": "插件包无效：manifest.json 内容不正确。",
+    "host/pluginInstall/error/missingTermination": "插件不符合宿主规范：缺少 supportsTerminationOnCancel=true。",
+    "host/pluginInstall/error/filesInUse": "安装失败：插件文件正在被占用。请停止当前任务或重启 ConverTool 后重试。",
+    "host/pluginInstall/error/filesLocked": "安装失败：插件文件被其他进程锁定。请关闭占用后重试。",
+    "host/pluginInstall/error/unknown": "安装失败：发生未知错误。"
   }
 }
 

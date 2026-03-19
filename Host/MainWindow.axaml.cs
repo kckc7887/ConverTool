@@ -3,10 +3,12 @@ using Avalonia;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Layout;
 using Avalonia.Threading;
 using System;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Host.ViewModels;
 
 namespace Host;
@@ -34,6 +36,7 @@ public partial class MainWindow : Window
         }
 
         _vm.TopLevel = TopLevel.GetTopLevel(this);
+        _vm.ShowErrorDialogAsync = ShowErrorDialogAsync;
         _vm.PropertyChanged += OnVmPropertyChanged;
     }
 
@@ -127,5 +130,43 @@ public partial class MainWindow : Window
         var win = new PluginManagerWindow();
         await win.ShowDialog(this);
         _vm?.RefreshPluginsFromDisk();
+    }
+
+    private async Task ShowErrorDialogAsync(string message)
+    {
+        var dialog = new Window
+        {
+            Title = AppServices.I18n.T("host/dialog/errorTitle"),
+            Width = 460,
+            MinHeight = 180,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new DockPanel
+            {
+                Margin = new Thickness(16),
+                LastChildFill = true,
+                Children =
+                {
+                    new Button
+                    {
+                        Content = "OK",
+                        HorizontalAlignment = HorizontalAlignment.Right,
+                        MinWidth = 90,
+                        [DockPanel.DockProperty] = Dock.Bottom
+                    },
+                    new TextBlock
+                    {
+                        Text = message,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    }
+                }
+            }
+        };
+
+        if (dialog.Content is DockPanel dock && dock.Children.FirstOrDefault() is Button okBtn)
+        {
+            okBtn.Click += (_, _) => dialog.Close();
+        }
+
+        await dialog.ShowDialog(this);
     }
 }

@@ -11,6 +11,7 @@
     "host/input/placeholder": "Drop files here or click to add...",
     "host/input/browse": "Browse...",
     "host/config/placeholder": "Config UI is provided by plugins.",
+    "host/config/activateByInput": "Add input files to activate plugin config.",
     "host/config/noPluginHint": "You need to add a plugin first. Click “Add plugin” in the top-right.",
     "host/process/placeholder": "Logs and progress will appear here.",
     "host/output/placeholder": "Converted files will be listed here.",
@@ -44,10 +45,20 @@
     "host/pluginManager/add": "Add",
     "host/pluginManager/delete": "Delete",
     "host/pluginManager/listHeader": "Installed plugins",
+    "host/pluginManager/author": "Author",
     "host/pluginManager/hint": "Delete removes plugins/<pluginId>/ directory.",
     "host/pluginManager/pickerUnavailable": "Cannot open file picker (StorageProvider unavailable). Try restarting the app or use “Add plugin” on the main window.",
     "host/pluginManager/addPickerTitle": "Select plugin .zip",
-    "host/pluginManager/selectZip": "Please select a .zip file."
+    "host/pluginManager/selectZip": "Please select a .zip file.",
+    "host/dialog/errorTitle": "Error",
+    "host/pluginInstall/error/invalidZip": "Please select a .zip file.",
+    "host/pluginInstall/error/manifestNotFound": "Invalid plugin package: manifest.json not found.",
+    "host/pluginInstall/error/manifestNotUnique": "Invalid plugin package: multiple manifest.json files found.",
+    "host/pluginInstall/error/manifestInvalid": "Invalid plugin package: manifest.json is invalid.",
+    "host/pluginInstall/error/missingTermination": "Plugin does not meet host requirements: supportsTerminationOnCancel=true is required.",
+    "host/pluginInstall/error/filesInUse": "Install failed: plugin files are in use. Stop current tasks or restart ConverTool and retry.",
+    "host/pluginInstall/error/filesLocked": "Install failed: plugin files are locked by another process. Close the lock holder and retry.",
+    "host/pluginInstall/error/unknown": "Install failed: unknown error."
   }
 }
 

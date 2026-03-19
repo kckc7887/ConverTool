@@ -1,0 +1,26 @@
+{
+  "strings": {
+    "plugin/ffmpeg.video.transcoder/title": "FFmpeg 视频转码器",
+    "plugin/ffmpeg.video.transcoder/description": "使用 FFmpeg 进行视频转码（CRF + 硬件加速）。",
+
+    "plugin/ffmpeg.video.transcoder/section/basic": "基础",
+
+    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4（通用兼容）",
+    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV（封装灵活）",
+    "plugin/ffmpeg.video.transcoder/target/mov": "MOV（苹果生态）",
+    "plugin/ffmpeg.video.transcoder/target/webm": "WebM（网页优先）",
+    "plugin/ffmpeg.video.transcoder/target/avi": "AVI（老设备兼容）",
+
+    "plugin/ffmpeg.video.transcoder/field/crf/label": "CRF / 质量",
+    "plugin/ffmpeg.video.transcoder/field/crf/help": "数值越小质量越高、体积越大。CPU/x264 常用 18-28。GPU 编码时会把 CRF 映射到最接近的质量参数。",
+
+    "plugin/ffmpeg.video.transcoder/field/hw/label": "硬件加速",
+    "plugin/ffmpeg.video.transcoder/field/hw/help": "选择编码后端，需要对应显卡与带相应编码器的 FFmpeg 构建。",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "CPU（libx264）",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA（NVENC）",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD（AMF）",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel（QSV）"
+  }
+}
+
+

@@ -38,6 +38,9 @@ public sealed class PluginManifestModel
     [JsonPropertyName("descriptionKey")]
     public string? DescriptionKey { get; set; }
 
+    [JsonPropertyName("author")]
+    public string? Author { get; set; }
+
     // Host legality check: plugin must be able to stop any external processes it spawns
     // when the Host cancels ExecuteAsync via CancellationToken.
     // If false/missing, the Host will skip loading the plugin.

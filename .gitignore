@@ -27,3 +27,10 @@ plugins-src/**/obj/
 plugins-src/**/out/
 plugins-src/**/dist/
 
+# Unified plugin runtime/build outputs
+plugins/
+plugins-dist/
+
+# Local archive for old versions
+old-versions/
+

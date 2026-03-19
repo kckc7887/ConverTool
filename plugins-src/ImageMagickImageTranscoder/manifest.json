@@ -1,0 +1,33 @@
+{
+  "pluginId": "imagemagick.image.transcoder",
+  "version": "0.1.0",
+  "author": "Chnynnya",
+  "assembly": "ImageMagickImageTranscoder.dll",
+  "type": "ImageMagickImageTranscoder.ImageMagickImageTranscoderPlugin",
+  "supportsTerminationOnCancel": true,
+  "titleKey": "plugin/imagemagick.image.transcoder/title",
+  "descriptionKey": "plugin/imagemagick.image.transcoder/description",
+  "supportedInputExtensions": [
+    "png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "heic"
+  ],
+  "supportedTargetFormats": [
+    { "id": "png", "displayNameKey": "plugin/imagemagick.image.transcoder/target/png" },
+    { "id": "jpg", "displayNameKey": "plugin/imagemagick.image.transcoder/target/jpg" },
+    { "id": "jpeg", "displayNameKey": "plugin/imagemagick.image.transcoder/target/jpeg" },
+    { "id": "bmp", "displayNameKey": "plugin/imagemagick.image.transcoder/target/bmp" },
+    { "id": "gif", "displayNameKey": "plugin/imagemagick.image.transcoder/target/gif" },
+    { "id": "tiff", "displayNameKey": "plugin/imagemagick.image.transcoder/target/tiff" },
+    { "id": "webp", "displayNameKey": "plugin/imagemagick.image.transcoder/target/webp" },
+    { "id": "avif", "displayNameKey": "plugin/imagemagick.image.transcoder/target/avif" },
+    { "id": "ico", "displayNameKey": "plugin/imagemagick.image.transcoder/target/ico" }
+  ],
+  "configSchema": {
+    "sections": []
+  },
+  "supportedLocales": [
+    "en-US",
+    "zh-CN"
+  ],
+  "i18n": { "localesFolder": "locales" }
+}
+

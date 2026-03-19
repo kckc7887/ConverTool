@@ -3,14 +3,19 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Host.ViewModels"
+        xmlns:input="clr-namespace:Avalonia.Input;assembly=Avalonia.Base"
         mc:Ignorable="d"
         d:DesignWidth="720"
         d:DesignHeight="520"
         x:Class="Host.PluginManagerWindow"
         x:DataType="vm:PluginManagerViewModel"
+        Icon="avares://Host/Assets/convertool-icon.ico"
         Title="{Binding Title}">
 
-  <DockPanel Margin="24" LastChildFill="True">
+  <DockPanel Margin="24" LastChildFill="True"
+             input:DragDrop.AllowDrop="True"
+             input:DragDrop.DragOver="OnPluginZipDragOver"
+             input:DragDrop.Drop="OnPluginZipDrop">
     <!-- 工具栏 -->
     <Border DockPanel.Dock="Top" Padding="0,0,0,16" Margin="0,0,0,12"
             BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
@@ -42,12 +47,14 @@
                  SelectedItem="{Binding Selected, Mode=TwoWay}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:PluginItemVm">
-              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
                 <TextBlock FontWeight="SemiBold" Text="{Binding Title}" />
                 <TextBlock Grid.Column="1" Opacity="0.8" FontSize="14" Text="{Binding Version}" />
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Opacity="0.85" FontSize="14"
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Opacity="0.7" FontSize="13"
+                           Text="{Binding AuthorText}" />
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Opacity="0.85" FontSize="14"
                            Text="{Binding Description}" TextWrapping="Wrap" />
-                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Opacity="0.8" FontSize="14"
+                <TextBlock Grid.Row="3" Grid.ColumnSpan="2" Opacity="0.8" FontSize="14"
                            Text="{Binding Summary}" TextWrapping="Wrap" />
               </Grid>
             </DataTemplate>
