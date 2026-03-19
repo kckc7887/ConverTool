@@ -83,6 +83,8 @@ plugins/
 - `supportedLocales`：字符串数组（当前 Host 不强校验，仅作为声明信息）
 - `i18n`：对象
   - `i18n.localesFolder`：语言包目录名，缺失时 Host 默认使用 `"locales"`
+- `titleKey`：可选，插件标题 i18n key（用于插件管理器列表显示）
+- `descriptionKey`：可选，插件描述 i18n key（用于插件管理器列表显示）
 
 ### 3.2 最小可用示例
 
@@ -169,6 +171,12 @@ Host 当前支持以下 `type` 值（大小写必须匹配）：
     - `range` = `{ "min": 0, "max": 100, "step": 1 }`
   - 默认值解析：`defaultValue` 为 JSON number 或可解析字符串；不可解析时回退到 `min`
   - 插件收到的 `SelectedConfig[key]` 为 Range 控件的 `ValueText`（字符串形式的数值）
+- `Number`
+  - 需要 `range`：
+    - `range` = `{ "min": 0, "max": 100, "step": 1 }`
+  - 默认值解析：`defaultValue` 为 JSON number 或可解析字符串；不可解析时回退到 `min`
+  - UI：宿主使用 “Spinbox 风格”控件（输入框 + 右侧上/下箭头按钮）调节数值
+  - 插件收到的 `SelectedConfig[key]` 为该数值的 `ValueText`（字符串形式的数值）
 - `Path`
   - 需要 `path`：
     - `path.kind`：`"File"` 或 `"Folder"`
@@ -228,6 +236,9 @@ Host 当前支持以下 `type` 值（大小写必须匹配）：
 
 - 日志：使用 `reporter.OnLog(line)` 输出执行过程，便于定位问题
 - 进度：使用 `reporter.OnProgress(new ProgressInfo(stage, percentWithinStage))`
+- 外部进程日志（重要）：
+  - 若插件内部启动了外部命令/进程（如 `ffmpeg`），应当把该进程的 `stdout`/`stderr` **逐行实时**转发到 `reporter.OnLog(...)`。
+  - 不要只缓存“最后 N 行”，否则宿主 UI 可能在运行过程中看不到关键输出，用户只能等失败后才能定位问题。
 - 建议：
   - `ProgressStage.Preparing`：0~100（Host 映射到总进度 0~10）
   - `ProgressStage.Running`：0~100（Host 映射到总进度 10~90）

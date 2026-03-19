@@ -29,9 +29,9 @@ public sealed class PluginLoadHandle : IDisposable
         _alc.Unload();
         _alc = null;
 
-        // Help GC collect the collectible ALC deterministically.
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
+        // Do NOT call GC.Collect / WaitForPendingFinalizers here: this runs after every file and
+        // synchronously blocks threads (UI pool workers), causing freezes and occasional hard failures
+        // when the user hits Stop or runs batches. The collectible ALC will be collected naturally.
     }
 }
 

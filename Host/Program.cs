@@ -13,22 +13,47 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        AppServices.Plugins = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
-        AppServices.Plugins.PrintSummary();
-
-        // Step 4 verification hook:
-        // `dotnet run --project Host/Host.csproj -c Debug -- route <path>`
-        if (args.Length >= 2 && string.Equals(args[0], "route", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            var inputPath = args[1];
-            var match = PluginRouter.RouteByInputPath(AppServices.Plugins, inputPath);
-            Console.WriteLine(match is null
-                ? $"[route] No plugin matched input: {inputPath}"
-                : $"[route] Matched pluginId={match.Manifest.PluginId} for input: {inputPath}");
-        }
+            AppServices.Plugins = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
+            AppServices.Plugins.PrintSummary();
 
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
+            // Step 4 verification hook:
+            // `dotnet run --project Host/Host.csproj -c Debug -- route <path>`
+            if (args.Length >= 2 && string.Equals(args[0], "route", StringComparison.OrdinalIgnoreCase))
+            {
+                var inputPath = args[1];
+                var match = PluginRouter.RouteByInputPath(AppServices.Plugins, inputPath);
+                Console.WriteLine(match is null
+                    ? $"[route] No plugin matched input: {inputPath}"
+                    : $"[route] Matched pluginId={match.Manifest.PluginId} for input: {inputPath}");
+            }
+
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            // WinExe 下没有控制台时，用户看不到异常；因此落盘到文件，便于你排查。
+            try
+            {
+                var logPath = Path.Combine(AppContext.BaseDirectory, "startup-error.log");
+                var text =
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] Startup failed\r\n" +
+                    $"BaseDirectory: {AppContext.BaseDirectory}\r\n" +
+                    $"CurrentDirectory: {Environment.CurrentDirectory}\r\n" +
+                    $"Args: {string.Join(" ", args)}\r\n\r\n" +
+                    ex;
+                File.WriteAllText(logPath, text);
+            }
+            catch
+            {
+                // best effort
+            }
+
+            Console.Error.WriteLine(ex);
+            throw;
+        }
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

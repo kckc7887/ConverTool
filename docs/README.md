@@ -306,5 +306,12 @@ dotnet publish .\Host\Host.csproj -c Release -r win-x64 --self-contained false -
 - 你正在开发的插件 `zip`（每次修改后重新打包安装）
 - （可选）测试输入文件 + 命名模板/输出目录设置
 
+## A. Host 源码目录速查（维护用）
+
+- `Host/ViewModels/`：主窗口与插件管理 VM；用户设置持久化在 `MainWindowViewModel`（`%LocalAppData%\ConverTool\user-settings.json`）
+- `Host/Plugins/`：`PluginCatalog` / `PluginRouter` / **`PluginZipInstaller`**（主窗口与插件管理共用的 zip 安装逻辑）
+- `Host/Settings/`：`UserSettingsStore`（JSON 读写）
+- `plugins-src/`：仓库内示例插件源码（构建产物见 `.gitignore`，勿提交 `bin/obj/out/dist`）
+
 
 

@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <!-- Avalonia 桌面程序不需要控制台；避免“必须先唤起终端才能看到错误/启动”。 -->
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <Version>0.1.1</Version>
-    <AssemblyVersion>0.1.1.1</AssemblyVersion>
-    <FileVersion>0.1.1.1</FileVersion>
-    <InformationalVersion>0.1.1-fixed</InformationalVersion>
+    <Version>0.1.2</Version>
+    <AssemblyVersion>0.1.2.0</AssemblyVersion>
+    <FileVersion>0.1.2.0</FileVersion>
+    <InformationalVersion>0.1.2</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,11 +25,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConverTool.PluginAbstractions" Version="0.1.0" />
+    <PackageReference Include="ConverTool.PluginAbstractions" Version="0.1.2" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="locales\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="plugins\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

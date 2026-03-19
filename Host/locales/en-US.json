@@ -30,7 +30,9 @@
     "host/process/keepTemp": "Keep temp files on disk (for troubleshooting)"
     ,
     "host/process/pause": "Pause",
+    "host/process/pauseTooltip": "Takes effect before the next file starts (current file is not stopped immediately).",
     "host/process/stop": "Stop",
+    "host/process/logSection": "Process log",
     "host/process/parallelEnable": "Enable parallel processing (experimental)"
     ,
     "host/process/parallelism": "Parallelism"
@@ -42,7 +44,10 @@
     "host/pluginManager/add": "Add",
     "host/pluginManager/delete": "Delete",
     "host/pluginManager/listHeader": "Installed plugins",
-    "host/pluginManager/hint": "Delete removes plugins/<pluginId>/ directory."
+    "host/pluginManager/hint": "Delete removes plugins/<pluginId>/ directory.",
+    "host/pluginManager/pickerUnavailable": "Cannot open file picker (StorageProvider unavailable). Try restarting the app or use “Add plugin” on the main window.",
+    "host/pluginManager/addPickerTitle": "Select plugin .zip",
+    "host/pluginManager/selectZip": "Please select a .zip file."
   }
 }
 

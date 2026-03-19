@@ -30,7 +30,9 @@
     "host/process/keepTemp": "保留临时文件（用于排查）"
     ,
     "host/process/pause": "暂停",
+    "host/process/pauseTooltip": "在开始处理下一个文件前生效（当前文件不会立刻停止）。",
     "host/process/stop": "终止",
+    "host/process/logSection": "处理日志",
     "host/process/parallelEnable": "启用并行处理（测试）"
     ,
     "host/process/parallelism": "并行度"
@@ -42,7 +44,10 @@
     "host/pluginManager/add": "添加",
     "host/pluginManager/delete": "删除",
     "host/pluginManager/listHeader": "已安装插件",
-    "host/pluginManager/hint": "删除会直接移除 plugins/<pluginId>/ 目录。"
+    "host/pluginManager/hint": "删除会直接移除 plugins/<pluginId>/ 目录。",
+    "host/pluginManager/pickerUnavailable": "无法打开文件选择器（StorageProvider 不可用）。请重启应用，或使用主界面顶部的“添加插件”。",
+    "host/pluginManager/addPickerTitle": "选择插件 zip",
+    "host/pluginManager/selectZip": "请选择 .zip 插件包。"
   }
 }
 

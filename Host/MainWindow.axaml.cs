@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window
         DataContext = _vm;
 
         Opened += OnOpened;
+        Closing += (_, _) => _vm?.SaveUserSettingsNow();
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -93,9 +95,37 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void OnOpenPluginManager(object? sender, RoutedEventArgs e)
+    private void OnRootPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Clicks on "background" should clear keyboard focus (exit edit modes, remove focus rings).
+        // ComboBox "selected item" is state and may remain; this only clears focus/interaction state.
+        var pos = e.GetPosition(this);
+        var hit = this.InputHitTest(pos);
+
+        if (hit is Visual hitVisual)
+        {
+            Visual? cur = hitVisual;
+            while (cur is not null)
+            {
+                if (cur is Control c)
+                {
+                    if (c.Focusable && c.IsEnabled && c.IsVisible)
+                    {
+                        return; // let the control receive focus as usual
+                    }
+                }
+
+                cur = cur.Parent as Visual;
+            }
+        }
+
+        this.FocusManager?.ClearFocus();
+    }
+
+    private async void OnOpenPluginManager(object? sender, RoutedEventArgs e)
     {
         var win = new PluginManagerWindow();
-        win.ShowDialog(this);
+        await win.ShowDialog(this);
+        _vm?.RefreshPluginsFromDisk();
     }
 }

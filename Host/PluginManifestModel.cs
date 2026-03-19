@@ -32,6 +32,12 @@ public sealed class PluginManifestModel
     [JsonPropertyName("i18n")]
     public I18nModel? I18n { get; set; }
 
+    [JsonPropertyName("titleKey")]
+    public string? TitleKey { get; set; }
+
+    [JsonPropertyName("descriptionKey")]
+    public string? DescriptionKey { get; set; }
+
     // Host legality check: plugin must be able to stop any external processes it spawns
     // when the Host cancels ExecuteAsync via CancellationToken.
     // If false/missing, the Host will skip loading the plugin.

@@ -18,3 +18,12 @@ PluginAbstractions/
 # Build / publish output (release zips, etc.)
 artifacts/
 
+# Local scratch / tooling (never commit)
+.tmp/
+
+# Sample plugin build outputs
+plugins-src/**/bin/
+plugins-src/**/obj/
+plugins-src/**/out/
+plugins-src/**/dist/
+

@@ -183,8 +183,10 @@
   <Style Selector="TextBox.log-box">
     <Setter Property="FontFamily" Value="{DynamicResource MonospaceFontFamily}" />
     <Setter Property="FontSize" Value="14" />
-    <Setter Property="TextWrapping" Value="NoWrap" />
+    <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
+
+  <!-- (NumberFieldVm uses a custom spinbox-like layout, so we don't override ButtonSpinner template here.) -->
 
   <!-- 帮助文字 -->
   <Style Selector="TextBlock.help-text">

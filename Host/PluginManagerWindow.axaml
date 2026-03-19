@@ -42,10 +42,12 @@
                  SelectedItem="{Binding Selected, Mode=TwoWay}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:PluginItemVm">
-              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
-                <TextBlock FontWeight="SemiBold" Text="{Binding PluginId}" />
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                <TextBlock FontWeight="SemiBold" Text="{Binding Title}" />
                 <TextBlock Grid.Column="1" Opacity="0.8" FontSize="14" Text="{Binding Version}" />
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Opacity="0.8" FontSize="14"
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Opacity="0.85" FontSize="14"
+                           Text="{Binding Description}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Opacity="0.8" FontSize="14"
                            Text="{Binding Summary}" TextWrapping="Wrap" />
               </Grid>
             </DataTemplate>

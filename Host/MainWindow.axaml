@@ -8,7 +8,7 @@
         x:Class="Host.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding HostTitle}">
-    <DockPanel Margin="{DynamicResource PagePadding}" LastChildFill="True">
+    <DockPanel Margin="{DynamicResource PagePadding}" LastChildFill="True" PointerPressed="OnRootPointerPressed">
         <!-- 顶部栏：标题 + 操作区 -->
         <Border DockPanel.Dock="Top" Padding="0,0,0,20" Margin="0,0,0,8"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
@@ -33,22 +33,24 @@
             </Grid>
         </Border>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Grid ColumnDefinitions="*,440" ColumnSpacing="20" RowDefinitions="*">
-                <!-- 左侧：输入、配置、输出 -->
-                <StackPanel Grid.Column="0" Spacing="20">
+        <Grid ColumnDefinitions="*,1,420" ColumnSpacing="0" RowDefinitions="*"
+              MinWidth="720">
+            <!-- 左侧：输入、配置、输出（可滚动） -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled"
+                           Padding="0" Margin="0,0,12,0">
+                <StackPanel Spacing="20" HorizontalAlignment="Stretch">
                     <!-- 输入 -->
                     <StackPanel Spacing="10">
                         <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding InputHeader}"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-                        <Border Classes="card" IsEnabled="{Binding CanEdit}">
+                        <Border Classes="card" IsEnabled="{Binding CanEdit}" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="14">
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <TextBlock Opacity="0.8" VerticalAlignment="Center" Text="{Binding InputPathLabel}" />
                                     <Button Grid.Column="1" MinWidth="100" Content="{Binding InputBrowseLabel}"
                                             Command="{Binding BrowseInputCommand}" />
                                 </Grid>
-                                <TextBox AcceptsReturn="True" MinHeight="90"
+                                <TextBox x:Name="InputPathsBox" AcceptsReturn="True" MinHeight="90"
                                          Watermark="{Binding InputPlaceholder}"
                                          input:DragDrop.AllowDrop="True"
                                          input:DragDrop.DragOver="OnInputDragOver"
@@ -62,7 +64,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding ConfigHeader}"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-                        <Border Classes="card" IsEnabled="{Binding CanEdit}">
+                        <Border Classes="card" IsEnabled="{Binding CanEdit}" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="14">
                                 <TextBlock Text="{Binding ConfigPlaceholder}" TextWrapping="Wrap" Opacity="0.9" />
                                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"
@@ -93,6 +95,37 @@
                                                                         HorizontalAlignment="Left" />
                                                                 <TextBox Grid.Column="2" Width="80" HorizontalAlignment="Right"
                                                                          Text="{Binding ValueText, Mode=TwoWay}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                        <DataTemplate x:DataType="vm:NumberFieldVm">
+                                                            <!-- Spinbox-like number input:
+                                                                 TextBox for value + two vertical arrow buttons beside it. -->
+                                                            <Grid ColumnDefinitions="Auto,28" ColumnSpacing="0" VerticalAlignment="Center">
+                                                                <TextBox Grid.Column="0" MinWidth="0"
+                                                                         Width="{Binding SuggestedTextBoxWidth}"
+                                                                         FontFamily="{DynamicResource MonospaceFontFamily}"
+                                                                         Text="{Binding ValueText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                         HorizontalAlignment="Left" />
+                                                                <Grid Grid.Column="1" RowDefinitions="*,*">
+                                                                    <Button Grid.Row="0" Classes="secondary"
+                                                                            Content="▲"
+                                                                            Command="{Binding IncreaseCommand}"
+                                                                            MinWidth="28" MinHeight="0"
+                                                                            Padding="0"
+                                                                            CornerRadius="0"
+                                                                            BorderThickness="1,1,1,0"
+                                                                            HorizontalContentAlignment="Center"
+                                                                            VerticalContentAlignment="Center" />
+                                                                    <Button Grid.Row="1" Classes="secondary"
+                                                                            Content="▼"
+                                                                            Command="{Binding DecreaseCommand}"
+                                                                            MinWidth="28" MinHeight="0"
+                                                                            Padding="0"
+                                                                            CornerRadius="0"
+                                                                            BorderThickness="1,0,1,1"
+                                                                            HorizontalContentAlignment="Center"
+                                                                            VerticalContentAlignment="Center" />
+                                                                </Grid>
                                                             </Grid>
                                                         </DataTemplate>
                                                         <DataTemplate x:DataType="vm:CheckboxFieldVm">
@@ -128,15 +161,14 @@
                     <StackPanel Spacing="10">
                         <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding OutputHeader}"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-                        <Border Classes="card">
+                        <Border Classes="card" HorizontalAlignment="Stretch">
                             <StackPanel Spacing="14">
-                                <TextBox Classes="log-box" IsReadOnly="True" AcceptsReturn="True"
-                                         Text="{Binding OutputText}" Height="160"
-                                         TextWrapping="NoWrap"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Auto" />
                                 <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
-                                    <TextBlock Text="{Binding OutputDirLabel}" />
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <CheckBox Content="{Binding UseInputDirLabel}"
+                                              IsChecked="{Binding UseInputDirAsOutput}" />
+                                    <TextBlock Text="{Binding OutputDirLabel}" IsVisible="{Binding !UseInputDirAsOutput}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10"
+                                          IsVisible="{Binding !UseInputDirAsOutput}">
                                         <TextBox Text="{Binding OutputDir, Mode=TwoWay}"
                                                  IsEnabled="{Binding !UseInputDirAsOutput}" />
                                         <Button Grid.Column="1" MinWidth="100"
@@ -144,64 +176,100 @@
                                                 IsEnabled="{Binding !UseInputDirAsOutput}"
                                                 Command="{Binding BrowseOutputDirCommand}" />
                                     </Grid>
-                                    <CheckBox Content="{Binding UseInputDirLabel}"
-                                              IsChecked="{Binding UseInputDirAsOutput}" />
                                     <TextBlock VerticalAlignment="Center" Text="{Binding NamingTemplateLabel}" />
                                     <TextBox Text="{Binding NamingTemplate, Mode=TwoWay}" />
                                     <TextBlock Classes="help-text" TextWrapping="Wrap"
                                                Text="{Binding NamingTemplateHelp}" />
+                                    <CheckBox Content="{Binding KeepTempLabel}" IsChecked="{Binding KeepTemp}"
+                                              IsEnabled="{Binding CanEdit}" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- 右侧：处理控制 -->
-                <StackPanel Grid.Column="1" Spacing="20">
-                    <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding ProcessHeader}"
-                               Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
-                    <Border Classes="card">
-                        <StackPanel Spacing="18">
+            </ScrollViewer>
+
+            <!-- 左/右分区视觉提示 -->
+            <Border Grid.Column="1" Background="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                    Width="1" Opacity="0.35" />
+
+            <!-- 右侧：处理控制（按钮纵向 + 暂停/终止并排） -->
+            <!-- 右侧单独滚动：避免整页滚动，同时当内容过长时不会遮住底部控件 -->
+            <ScrollViewer Grid.Column="2"
+                              VerticalScrollBarVisibility="Hidden"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="0,0,10,0"
+                              Margin="12,0,0,0">
+                <StackPanel Spacing="20" MinWidth="360">
+                        <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding ProcessHeader}"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                        <Border Classes="card">
+                            <StackPanel Spacing="16">
                             <TextBlock Text="{Binding ProcessPlaceholder}" TextWrapping="Wrap" Opacity="0.9" />
                             <StackPanel Spacing="8">
                                 <ProgressBar Minimum="0" Maximum="100" Height="8"
                                              Value="{Binding Progress}" HorizontalAlignment="Stretch" />
-                                <TextBlock Opacity="0.8" FontSize="13" Text="{Binding ProgressText}" />
+                                <TextBlock Opacity="0.8" FontSize="13" Text="{Binding ProgressText}"
+                                           TextWrapping="Wrap" />
                             </StackPanel>
                             <TextBlock Opacity="0.85" FontSize="13" Text="{Binding BatchText}" TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <Button MinWidth="130" Classes="primary" Content="{Binding StartLabel}"
-                                        Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}" />
-                                <Button MinWidth="100" Classes="secondary" Content="{Binding PauseLabel}"
-                                        Command="{Binding PauseCommand}" IsEnabled="{Binding IsBusy}" />
-                                <Button MinWidth="100" Classes="secondary" Content="{Binding StopLabel}"
-                                        Command="{Binding StopCommand}" IsEnabled="{Binding IsBusy}" />
+                            <!-- 操作区：开始独占一行；暂停 / 终止并排等分 -->
+                            <StackPanel Spacing="10">
+                                <Button Classes="primary" Content="{Binding StartLabel}"
+                                        Command="{Binding StartCommand}" IsEnabled="{Binding CanStart}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                        MinHeight="40" />
+                                <Grid ColumnDefinitions="*,12,*">
+                                    <Button Grid.Column="0" Classes="secondary" Content="{Binding PauseLabel}"
+                                            ToolTip.Tip="{Binding PauseTooltipLabel}"
+                                            Command="{Binding PauseCommand}" IsEnabled="{Binding IsBusy}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            MinHeight="40" />
+                                    <Button Grid.Column="2" Classes="secondary" Content="{Binding StopLabel}"
+                                            Command="{Binding StopCommand}" IsEnabled="{Binding IsBusy}"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            MinHeight="40" />
+                                </Grid>
                             </StackPanel>
+                            <Separator Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Height="1"
+                                       Opacity="0.35" />
                             <CheckBox Content="{Binding EnableParallelLabel}"
                                       IsChecked="{Binding EnableParallelProcessing}"
                                       IsEnabled="{Binding CanEdit}" />
-                            <StackPanel Spacing="6" IsVisible="{Binding EnableParallelProcessing}"
+                            <StackPanel Spacing="8" IsVisible="{Binding EnableParallelProcessing}"
                                         IsEnabled="{Binding CanEdit}">
-                                <TextBlock Opacity="0.8" Text="{Binding ParallelismLabel}" />
-                                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                    <Slider Width="200" Minimum="1" Maximum="8" TickFrequency="1"
+                                <TextBlock Opacity="0.8" Text="{Binding ParallelismLabel}" TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Slider Grid.Column="0" Minimum="1" Maximum="8" TickFrequency="1"
                                             IsSnapToTickEnabled="True"
+                                            HorizontalAlignment="Stretch"
                                             Value="{Binding Parallelism, Mode=TwoWay}" />
-                                    <TextBlock Width="28" FontWeight="SemiBold" Text="{Binding Parallelism}" />
-                                </StackPanel>
+                                    <TextBlock Grid.Column="1" MinWidth="28" FontWeight="SemiBold"
+                                               VerticalAlignment="Center" Text="{Binding Parallelism}" />
+                                </Grid>
                             </StackPanel>
+                            <TextBlock FontWeight="SemiBold" Opacity="0.85" Text="{Binding ProcessLogSectionLabel}" />
                             <TextBox x:Name="ProcessLogBox" AcceptsReturn="True" IsReadOnly="True"
-                                     Classes="log-box" Height="160"
+                                     Classes="log-box" Height="180" MinHeight="120"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                     TextWrapping="NoWrap"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     TextWrapping="Wrap"
                                      Text="{Binding ProcessLog}" />
-                            <CheckBox Content="{Binding KeepTempLabel}" IsChecked="{Binding KeepTemp}"
-                                      IsEnabled="{Binding CanEdit}" />
-                        </StackPanel>
-                    </Border>
+
+                            <Separator Background="{DynamicResource SystemControlForegroundBaseLowBrush}" Height="1"
+                                       Opacity="0.35" />
+                            <TextBlock FontWeight="SemiBold" Opacity="0.85" Text="{Binding OutputHeader}" />
+                            <TextBox Classes="log-box" IsReadOnly="True" AcceptsReturn="True"
+                                     Text="{Binding OutputText}" Height="160"
+                                     TextWrapping="Wrap"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.AllowAutoHide="False"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+                            </StackPanel>
+                        </Border>
                 </StackPanel>
-            </Grid>
-        </ScrollViewer>
+            </ScrollViewer>
+        </Grid>
     </DockPanel>
 </Window>

@@ -2,8 +2,36 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Input;
+using System.Globalization;
 
 namespace Host.ViewModels;
+
+internal sealed class SyncCommand : ICommand
+{
+    private readonly Action _execute;
+    private readonly Func<bool>? _canExecute;
+
+    public SyncCommand(Action execute, Func<bool>? canExecute = null)
+    {
+        _execute = execute;
+        _canExecute = canExecute;
+    }
+
+    public event EventHandler? CanExecuteChanged;
+
+    public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
+
+    public void Execute(object? parameter)
+    {
+        if (CanExecute(parameter))
+        {
+            _execute();
+            // Notify potential bindings/subscribers even though CanExecute is effectively constant.
+            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+}
 
 public abstract class ConfigFieldVm : ObservableObject
 {
@@ -200,6 +228,118 @@ public sealed class RangeFieldVm : ConfigFieldVm
     }
 
     public override object? GetValue() => ValueText;
+}
+
+public sealed class NumberFieldVm : ConfigFieldVm
+{
+    private decimal _value;
+
+    public NumberFieldVm(string key, string label, string? help, double min, double max, double step, double defaultValue)
+        : base(key, label, help)
+    {
+        if (min <= max)
+        {
+            Min = ToDecimalSafe(min);
+            Max = ToDecimalSafe(max);
+        }
+        else
+        {
+            Min = ToDecimalSafe(max);
+            Max = ToDecimalSafe(min);
+        }
+
+        // Decimal increment for NumericUpDown; keep it finite and positive.
+        if (step <= 0 || double.IsNaN(step) || double.IsInfinity(step))
+        {
+            step = 1;
+        }
+        Step = ToDecimalSafe(step);
+        if (Step <= 0) Step = 1;
+
+        _value = ClampToRange(ToDecimalSafe(defaultValue));
+
+        // Used by the spinbox-like UI: keep the input box width compact
+        // based on the "max allowed value" string length.
+        MaxTextLength = FormatForLength(Max).Length;
+        SuggestedTextBoxWidth = Math.Clamp(MaxTextLength * 8 + 28, 70, 280);
+
+        IncreaseCommand = new SyncCommand(() => Value = Value + Step);
+        DecreaseCommand = new SyncCommand(() => Value = Value - Step);
+    }
+
+    public decimal Min { get; }
+    public decimal Max { get; }
+    public decimal Step { get; }
+
+    public int MaxTextLength { get; }
+    public double SuggestedTextBoxWidth { get; }
+
+    public decimal Value
+    {
+        get => _value;
+        set
+        {
+            var next = ClampToRange(value);
+            if (SetProperty(ref _value, next))
+            {
+                RaisePropertyChanged(nameof(ValueText));
+            }
+        }
+    }
+
+    // NumericUpDown binds to decimal, but Host/Plugin protocol persists values as strings.
+    public string ValueText
+    {
+        get => Value.ToString(CultureInfo.InvariantCulture);
+        set
+        {
+            var s = (value ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return;
+            }
+
+            // Accept both "." and "," decimal separators for better UX in zh-CN.
+            s = s.Replace(',', '.');
+            if (decimal.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+            {
+                Value = parsed;
+            }
+        }
+    }
+
+    public ICommand IncreaseCommand { get; }
+    public ICommand DecreaseCommand { get; }
+
+    public override object? GetValue() => ValueText;
+
+    private static string FormatForLength(decimal v)
+        => v.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture);
+
+    private static decimal ToDecimalSafe(double v)
+    {
+        try
+        {
+            if (double.IsNaN(v) || double.IsInfinity(v))
+            {
+                return 0;
+            }
+
+            // Cast may overflow if v is huge; still protect with try/catch.
+            return (decimal)v;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private decimal ClampToRange(decimal v)
+    {
+        if (v < Min) v = Min;
+        if (v > Max) v = Max;
+        return v;
+    }
 }
 
 public sealed record OptionVm(string Id, string Text)

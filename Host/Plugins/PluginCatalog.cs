@@ -40,10 +40,7 @@ public sealed class PluginCatalog
             try
             {
                 var json = File.ReadAllText(manifestPath);
-                var manifest = JsonSerializer.Deserialize<PluginManifestModel>(
-                    json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
+                var manifest = JsonSerializer.Deserialize<PluginManifestModel>(json, PluginZipInstaller.ManifestJsonOptions);
 
                 if (manifest is null || string.IsNullOrWhiteSpace(manifest.PluginId))
                 {

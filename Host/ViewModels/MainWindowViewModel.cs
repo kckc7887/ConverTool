@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,17 +12,36 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Host.Plugins;
+using Host.Settings;
+using Host;
 using PluginAbstractions;
 
 namespace Host.ViewModels;
 
 public sealed class MainWindowViewModel : ObservableObject
 {
+    private static readonly HashSet<string> PersistableVmProps = new(StringComparer.Ordinal)
+    {
+        nameof(SelectedLanguage),
+        nameof(OutputDir),
+        nameof(UseInputDirAsOutput),
+        nameof(NamingTemplate),
+        nameof(EnableParallelProcessing),
+        nameof(Parallelism),
+        nameof(KeepTemp),
+        nameof(SelectedTargetFormat),
+    };
+
     private PluginCatalog _catalog;
     private readonly PluginI18nService _pluginI18n;
     private readonly I18nService _hostI18n;
 
     private PluginEntry? _activePlugin;
+
+    private UserSettingsFile _userSettings = new();
+    private bool _loadingUserSettings;
+    private DispatcherTimer? _saveUserSettingsTimer;
+    private readonly List<(ConfigFieldVm Field, PropertyChangedEventHandler Handler)> _configFieldHandlers = new();
 
     private bool _hasPlugins;
     public bool HasPlugins
@@ -60,8 +79,15 @@ public sealed class MainWindowViewModel : ObservableObject
         _pluginI18n = pluginI18n;
         _hostI18n = hostI18n;
 
+        _userSettings = UserSettingsStore.TryLoad() ?? new UserSettingsFile();
+        if (!string.IsNullOrWhiteSpace(_userSettings.Locale))
+        {
+            _hostI18n.SetLocale(AppContext.BaseDirectory, _userSettings.Locale);
+        }
+
         Languages = new ObservableCollection<string>(I18nService.SupportedLocales);
-        SelectedLanguage = _hostI18n.Locale;
+        _selectedLanguage = _hostI18n.Locale;
+        RaisePropertyChanged(nameof(SelectedLanguage));
 
         HostTitle = _hostI18n.T("host/app/title");
         LanguageLabel = _hostI18n.T("host/app/language");
@@ -89,7 +115,9 @@ public sealed class MainWindowViewModel : ObservableObject
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
         PauseLabel = _hostI18n.T("host/process/pause");
+        PauseTooltipLabel = _hostI18n.T("host/process/pauseTooltip");
         StopLabel = _hostI18n.T("host/process/stop");
+        ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
         EnableParallelLabel = _hostI18n.T("host/process/parallelEnable");
         ParallelismLabel = _hostI18n.T("host/process/parallelism");
 
@@ -98,7 +126,29 @@ public sealed class MainWindowViewModel : ObservableObject
             ? Path.Combine(AppContext.BaseDirectory, "output")
             : Path.Combine(docs, "ConverToolOutput");
         NamingTemplate = "{base}.{ext}";
-        InputPaths = "";
+
+        _loadingUserSettings = true;
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(_userSettings.OutputDir))
+            {
+                OutputDir = _userSettings.OutputDir.Trim();
+            }
+
+            UseInputDirAsOutput = _userSettings.UseInputDirAsOutput ?? true;
+            NamingTemplate = string.IsNullOrWhiteSpace(_userSettings.NamingTemplate)
+                ? "{base}.{ext}"
+                : _userSettings.NamingTemplate.Trim();
+            EnableParallelProcessing = _userSettings.EnableParallelProcessing;
+            Parallelism = Math.Clamp(_userSettings.Parallelism, 1, 8);
+            KeepTemp = _userSettings.KeepTemp;
+            // Input paths are runtime data; keep it empty on next launch.
+            InputPaths = "";
+        }
+        finally
+        {
+            _loadingUserSettings = false;
+        }
 
         StartCommand = new AsyncCommand(StartAsync);
         BrowseInputCommand = new AsyncCommand(BrowseInputAsync);
@@ -109,6 +159,7 @@ public sealed class MainWindowViewModel : ObservableObject
         AddPluginCommand = new AsyncCommand(AddPluginAsync);
 
         _hostI18n.LocaleChanged += (_, _) => ReloadHostStrings();
+        PropertyChanged += OnVmPersistablePropertyChanged;
         ReloadPluginContext();
     }
 
@@ -150,19 +201,36 @@ public sealed class MainWindowViewModel : ObservableObject
     public string KeepTempLabel { get; private set; } = "";
     public string StartLabel { get; private set; } = "";
     public string PauseLabel { get; private set; } = "";
+    public string PauseTooltipLabel { get; private set; } = "";
     public string StopLabel { get; private set; } = "";
+    public string ProcessLogSectionLabel { get; private set; } = "";
     public string EnableParallelLabel { get; private set; } = "";
     public string ParallelismLabel { get; private set; } = "";
     public string LanguageLabel { get; private set; } = "";
 
     // ---- inputs ----
     private string _inputPaths = "";
-    public string InputPaths { get => _inputPaths; set { if (SetProperty(ref _inputPaths, value)) ReloadPluginContext(); } }
+    public string InputPaths
+    {
+        get => _inputPaths;
+        set
+        {
+            if (!SetProperty(ref _inputPaths, value))
+            {
+                return;
+            }
+
+            if (!_loadingUserSettings)
+            {
+                ReloadPluginContext();
+            }
+        }
+    }
 
     private string _outputDir = "";
     public string OutputDir { get => _outputDir; set => SetProperty(ref _outputDir, value); }
 
-    private bool _useInputDirAsOutput;
+    private bool _useInputDirAsOutput = true;
     public bool UseInputDirAsOutput { get => _useInputDirAsOutput; set => SetProperty(ref _useInputDirAsOutput, value); }
 
     private bool _enableParallelProcessing;
@@ -261,6 +329,10 @@ public sealed class MainWindowViewModel : ObservableObject
         UseInputDirLabel = _hostI18n.T("host/output/useInputDir");
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
+        PauseLabel = _hostI18n.T("host/process/pause");
+        PauseTooltipLabel = _hostI18n.T("host/process/pauseTooltip");
+        StopLabel = _hostI18n.T("host/process/stop");
+        ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
 
         RaisePropertyChanged(nameof(LanguageLabel));
         RaisePropertyChanged(nameof(InputHeader));
@@ -285,7 +357,9 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(KeepTempLabel));
         RaisePropertyChanged(nameof(StartLabel));
         RaisePropertyChanged(nameof(PauseLabel));
+        RaisePropertyChanged(nameof(PauseTooltipLabel));
         RaisePropertyChanged(nameof(StopLabel));
+        RaisePropertyChanged(nameof(ProcessLogSectionLabel));
         RaisePropertyChanged(nameof(EnableParallelLabel));
         RaisePropertyChanged(nameof(ParallelismLabel));
 
@@ -295,6 +369,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void ReloadPluginContext()
     {
+        DetachConfigFieldHandlers();
+
         _activePlugin = ResolveActivePlugin();
         var plugin = _activePlugin;
         HasActivePlugin = plugin?.Manifest is not null;
@@ -315,52 +391,276 @@ public sealed class MainWindowViewModel : ObservableObject
         SelectedTargetFormat = TargetFormats.FirstOrDefault();
 
         var schema = plugin!.Manifest.ConfigSchema;
-        if (schema?.Sections is null)
+        if (schema?.Sections is not null)
+        {
+            foreach (var section in schema.Sections)
+            {
+                foreach (var field in section.Fields ?? Array.Empty<ConfigFieldModel>())
+                {
+                    if (string.IsNullOrWhiteSpace(field.Key))
+                    {
+                        continue;
+                    }
+
+                    var label = _pluginI18n.T(plugin, field.LabelKey, _hostI18n.Locale);
+                    var help = string.IsNullOrWhiteSpace(field.HelpKey) ? null : _pluginI18n.T(plugin, field.HelpKey, _hostI18n.Locale);
+                    var type = (field.Type ?? "Text").Trim();
+
+                    ConfigFieldVm vm = type switch
+                    {
+                        "Checkbox" => new CheckboxFieldVm(field.Key, label, help, defaultValue: false),
+                        "Select" => new SelectFieldVm(
+                            field.Key,
+                            label,
+                            help,
+                            (field.Options ?? Array.Empty<ConfigOptionModel>())
+                                .Select(o => new OptionVm(o.Id, _pluginI18n.T(plugin!, o.LabelKey, _hostI18n.Locale)))
+                                .ToList(),
+                            defaultId: TryGetStringDefault(field.DefaultValue)
+                        ),
+                        "Path" => new PathFieldVm(field.Key, label, help, TryGetStringDefault(field.DefaultValue), field.Path?.Kind ?? "File"),
+                        "Range" => new RangeFieldVm(
+                            field.Key,
+                            label,
+                            help,
+                            min: field.Range?.Min ?? 0,
+                            max: field.Range?.Max ?? 100,
+                            step: field.Range?.Step ?? 1,
+                            defaultValue: TryGetDoubleDefault(field.DefaultValue, field.Range?.Min ?? 0)
+                        ),
+                        "Number" => new NumberFieldVm(
+                            field.Key,
+                            label,
+                            help,
+                            min: field.Range?.Min ?? 0,
+                            max: field.Range?.Max ?? 100,
+                            step: field.Range?.Step ?? 1,
+                            defaultValue: TryGetDoubleDefault(field.DefaultValue, field.Range?.Min ?? 0)
+                        ),
+                        _ => new TextFieldVm(field.Key, label, help, TryGetStringDefault(field.DefaultValue))
+                    };
+
+                    ConfigFields.Add(vm);
+                }
+            }
+        }
+
+        _loadingUserSettings = true;
+        try
+        {
+            RestorePluginUiFromSettings();
+        }
+        finally
+        {
+            _loadingUserSettings = false;
+        }
+
+        AttachConfigFieldHandlers();
+    }
+
+    private void OnVmPersistablePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (_loadingUserSettings)
         {
             return;
         }
 
-        foreach (var section in schema.Sections)
+        if (e.PropertyName is null || !PersistableVmProps.Contains(e.PropertyName))
         {
-            foreach (var field in section.Fields ?? Array.Empty<ConfigFieldModel>())
+            return;
+        }
+
+        ScheduleSaveUserSettings();
+    }
+
+    private void ScheduleSaveUserSettings()
+    {
+        if (_loadingUserSettings)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            _saveUserSettingsTimer ??= new DispatcherTimer(
+                TimeSpan.FromMilliseconds(500),
+                DispatcherPriority.Background,
+                (_, _) => FlushSaveUserSettings());
+            _saveUserSettingsTimer.Stop();
+            _saveUserSettingsTimer.Start();
+        }, DispatcherPriority.Background);
+    }
+
+    public void SaveUserSettingsNow() => FlushSaveUserSettings();
+
+    private void FlushSaveUserSettings()
+    {
+        try
+        {
+            _saveUserSettingsTimer?.Stop();
+            UserSettingsStore.Save(CaptureCurrentUserSettings());
+        }
+        catch
+        {
+            // best effort
+        }
+    }
+
+    private UserSettingsFile CaptureCurrentUserSettings()
+    {
+        _userSettings.Locale = _hostI18n.Locale;
+        // Don't persist InputPaths (user's runtime selection).
+        _userSettings.InputPaths = null;
+        _userSettings.OutputDir = _outputDir;
+        _userSettings.UseInputDirAsOutput = _useInputDirAsOutput;
+        _userSettings.NamingTemplate = _namingTemplate;
+        _userSettings.EnableParallelProcessing = _enableParallelProcessing;
+        _userSettings.Parallelism = _parallelism;
+        _userSettings.KeepTemp = _keepTemp;
+
+        if (_activePlugin?.Manifest?.PluginId is { } pid)
+        {
+            if (!_userSettings.Plugins.TryGetValue(pid, out var plug))
             {
-                if (string.IsNullOrWhiteSpace(field.Key))
-                {
-                    continue;
-                }
+                plug = new PluginUserSettings();
+                _userSettings.Plugins[pid] = plug;
+            }
 
-                var label = _pluginI18n.T(plugin, field.LabelKey, _hostI18n.Locale);
-                var help = string.IsNullOrWhiteSpace(field.HelpKey) ? null : _pluginI18n.T(plugin, field.HelpKey, _hostI18n.Locale);
-                var type = (field.Type ?? "Text").Trim();
-
-                ConfigFieldVm vm = type switch
+            plug.TargetFormatId = SelectedTargetFormat?.Id;
+            plug.Fields.Clear();
+            foreach (var f in ConfigFields)
+            {
+                var v = f.GetValue();
+                plug.Fields[f.Key] = v switch
                 {
-                    "Checkbox" => new CheckboxFieldVm(field.Key, label, help, defaultValue: false),
-                    "Select" => new SelectFieldVm(
-                        field.Key,
-                        label,
-                        help,
-                        (field.Options ?? Array.Empty<ConfigOptionModel>())
-                            .Select(o => new OptionVm(o.Id, _pluginI18n.T(plugin!, o.LabelKey, _hostI18n.Locale)))
-                            .ToList(),
-                        defaultId: TryGetStringDefault(field.DefaultValue)
-                    ),
-                    "Path" => new PathFieldVm(field.Key, label, help, TryGetStringDefault(field.DefaultValue), field.Path?.Kind ?? "File"),
-                    "Range" => new RangeFieldVm(
-                        field.Key,
-                        label,
-                        help,
-                        min: field.Range?.Min ?? 0,
-                        max: field.Range?.Max ?? 100,
-                        step: field.Range?.Step ?? 1,
-                        defaultValue: TryGetDoubleDefault(field.DefaultValue, field.Range?.Min ?? 0)
-                    ),
-                    _ => new TextFieldVm(field.Key, label, help, TryGetStringDefault(field.DefaultValue))
+                    null => "",
+                    bool b => b ? "true" : "false",
+                    _ => v.ToString() ?? ""
                 };
-
-                ConfigFields.Add(vm);
             }
         }
+
+        return _userSettings;
+    }
+
+    private void RestorePluginUiFromSettings()
+    {
+        if (_activePlugin?.Manifest?.PluginId is not { } pid)
+        {
+            return;
+        }
+
+        if (!_userSettings.Plugins.TryGetValue(pid, out var ps))
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ps.TargetFormatId))
+        {
+            var tf = TargetFormats.FirstOrDefault(t =>
+                string.Equals(t.Id, ps.TargetFormatId, StringComparison.OrdinalIgnoreCase));
+            if (tf is not null)
+            {
+                SelectedTargetFormat = tf;
+            }
+        }
+
+        foreach (var field in ConfigFields)
+        {
+            if (!ps.Fields.TryGetValue(field.Key, out var raw))
+            {
+                continue;
+            }
+
+            ApplyFieldString(field, raw);
+        }
+    }
+
+    private static void ApplyFieldString(ConfigFieldVm field, string raw)
+    {
+        switch (field)
+        {
+            case TextFieldVm t:
+                t.Text = raw;
+                break;
+            case PathFieldVm p:
+                p.Path = raw;
+                break;
+            case CheckboxFieldVm c:
+                if (bool.TryParse(raw, out var cb))
+                {
+                    c.IsChecked = cb;
+                }
+                else if (string.Equals(raw, "1", StringComparison.Ordinal))
+                {
+                    c.IsChecked = true;
+                }
+                else if (string.Equals(raw, "0", StringComparison.Ordinal))
+                {
+                    c.IsChecked = false;
+                }
+
+                break;
+            case SelectFieldVm s:
+                var opt = s.Options.FirstOrDefault(o =>
+                    string.Equals(o.Id, raw, StringComparison.OrdinalIgnoreCase));
+                if (opt is not null)
+                {
+                    s.Selected = opt;
+                }
+
+                break;
+            case RangeFieldVm r:
+                r.ValueText = raw;
+                break;
+            case NumberFieldVm n:
+                // Stored as invariant-culture string.
+                if (decimal.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dv))
+                {
+                    n.Value = dv;
+                }
+                else
+                {
+                    // Best effort: keep current value if parse fails.
+                }
+                break;
+        }
+    }
+
+    private void AttachConfigFieldHandlers()
+    {
+        DetachConfigFieldHandlers();
+        foreach (var f in ConfigFields)
+        {
+            PropertyChangedEventHandler h = (_, _) =>
+            {
+                if (_loadingUserSettings)
+                {
+                    return;
+                }
+
+                ScheduleSaveUserSettings();
+            };
+            f.PropertyChanged += h;
+            _configFieldHandlers.Add((f, h));
+        }
+    }
+
+    private void DetachConfigFieldHandlers()
+    {
+        foreach (var (f, h) in _configFieldHandlers)
+        {
+            try
+            {
+                f.PropertyChanged -= h;
+            }
+            catch
+            {
+                // best effort
+            }
+        }
+
+        _configFieldHandlers.Clear();
     }
 
     private PluginEntry? ResolveActivePlugin()
@@ -741,7 +1041,7 @@ public sealed class MainWindowViewModel : ObservableObject
         if (_paused)
         {
             _pauseGate.Reset();
-            AppendLog("[host] Paused (will pause before next file).");
+            AppendLog("[host] Paused (will take effect before next file).");
         }
         else
         {
@@ -754,6 +1054,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private Task StopAsync()
     {
+        // If user paused, workers may be blocked on _pauseGate; release so they can observe cancellation.
+        _paused = false;
+        _pauseGate.Set();
         _runCts?.Cancel();
         return Task.CompletedTask;
     }
@@ -911,78 +1214,27 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         var zipPath = zip.Path.LocalPath;
-        if (string.IsNullOrWhiteSpace(zipPath) || !zipPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        var result = await PluginZipInstaller.InstallFromZipAsync(zipPath, AppContext.BaseDirectory);
+        if (!result.Ok)
         {
-            AppendLog("[host] Please select a .zip file.");
+            AppendLog("[host] " + result.Message);
             return;
         }
 
-        var pluginsRoot = Path.Combine(AppContext.BaseDirectory, "plugins");
-        Directory.CreateDirectory(pluginsRoot);
+        AppendLog($"[host] Plugin added: {result.PluginId}");
+        ReloadCatalog();
+    }
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "ConverToolPluginInstall", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempRoot);
-
-        try
-        {
-            ZipFile.ExtractToDirectory(zipPath, tempRoot);
-
-            var manifestPaths = Directory.GetFiles(tempRoot, "manifest.json", SearchOption.AllDirectories);
-            if (manifestPaths.Length == 0)
-            {
-                AppendLog("[host] Invalid plugin zip: manifest.json not found.");
-                return;
-            }
-
-            if (manifestPaths.Length != 1)
-            {
-                AppendLog($"[host] Invalid plugin zip: expected exactly 1 manifest.json, found {manifestPaths.Length}.");
-                return;
-            }
-
-            var manifestPath = manifestPaths[0];
-            var json = await File.ReadAllTextAsync(manifestPath);
-            var manifest = JsonSerializer.Deserialize<PluginManifestModel>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (manifest is null || string.IsNullOrWhiteSpace(manifest.PluginId))
-            {
-                AppendLog("[host] Invalid plugin manifest.json.");
-                return;
-            }
-
-            if (!manifest.SupportsTerminationOnCancel)
-            {
-                AppendLog($"[host] Skip plugin '{manifest.PluginId}': requires supportsTerminationOnCancel=true.");
-                return;
-            }
-
-            var manifestDir = Path.GetDirectoryName(manifestPath) ?? tempRoot;
-            var destDir = Path.Combine(pluginsRoot, manifest.PluginId);
-
-            if (Directory.Exists(destDir))
-            {
-                Directory.Delete(destDir, recursive: true);
-            }
-
-            Directory.CreateDirectory(destDir);
-
-            CopyDirectoryRecursive(manifestDir, destDir);
-            AppendLog($"[host] Plugin added: {manifest.PluginId}");
-
-            ReloadCatalog();
-        }
-        catch (Exception ex)
-        {
-            AppendLog($"[host] Add plugin failed: {ex.GetType().Name}: {ex.Message}");
-        }
-        finally
-        {
-            try { Directory.Delete(tempRoot, recursive: true); } catch { /* best effort */ }
-        }
+    /// <summary>Rescan <c>plugins/</c> from disk (e.g. after plugin manager add/delete). Keeps <see cref="AppServices.Plugins"/> in sync.</summary>
+    public void RefreshPluginsFromDisk()
+    {
+        ReloadCatalog();
     }
 
     private void ReloadCatalog()
     {
         _catalog = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
+        AppServices.Plugins = _catalog;
         HasPlugins = _catalog.Plugins.Count > 0;
         ConfigPlaceholder = HasPlugins
             ? _hostI18n.T("host/config/placeholder")
@@ -990,24 +1242,6 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(ConfigPlaceholder));
 
         ReloadPluginContext();
-    }
-
-    private static void CopyDirectoryRecursive(string sourceDir, string destDir)
-    {
-        // Copy directory contents (not the parent folder itself).
-        foreach (var dirPath in Directory.GetDirectories(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var rel = Path.GetRelativePath(sourceDir, dirPath);
-            var target = Path.Combine(destDir, rel);
-            Directory.CreateDirectory(target);
-        }
-
-        foreach (var filePath in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
-        {
-            var rel = Path.GetRelativePath(sourceDir, filePath);
-            var target = Path.Combine(destDir, rel);
-            File.Copy(filePath, target, overwrite: true);
-        }
     }
 
     public void AddInputPaths(IEnumerable<string> paths)
