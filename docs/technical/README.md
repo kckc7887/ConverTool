@@ -135,7 +135,7 @@ Host 在启动时通过 `PluginCatalog.LoadFromOutput(AppContext.BaseDirectory)`
 
 `MainWindowViewModel.ReloadPluginContext()`：
 
-1. 通过输入框的“第一行输入”确定“激活插件”（`ResolveActivePlugin`）
+1. 通过输入文件列表中的**第一个文件**确定“激活插件”（`ResolveActivePlugin`）
 2. 将激活插件的：
    - `SupportedTargetFormats` 显示为目标格式下拉
    - `ConfigSchema.Sections[].Fields[]` 动态生成配置控件
@@ -152,7 +152,7 @@ Host 在启动时通过 `PluginCatalog.LoadFromOutput(AppContext.BaseDirectory)`
 
 Host 会：
 
-- 从 `InputPaths`（多行文本）解析输入文件列表
+- 从 `InputFiles` 集合得到输入文件路径列表
 - 根据 `EnableParallelProcessing` 选择：
   - 串行：`RunSerialAsync`
   - 并行：`RunParallelAsync`（用 `SemaphoreSlim` 控制并发）
@@ -245,7 +245,7 @@ Host 会用 `VmReporter` 适配回调：
 
 当前 Host 的配置 UI 是“按第一行输入选激活插件”：
 
-- `ReloadPluginContext()` 使用 `InputPaths` 的第一条输入来决定激活插件，从而决定配置控件与目标格式选择
+- `ReloadPluginContext()` 使用 `InputFiles` 中第一项的路径来决定激活插件，从而决定配置控件与目标格式选择
 
 但执行时（串行/并行）是“对每个输入文件单独路由到匹配插件”：
 

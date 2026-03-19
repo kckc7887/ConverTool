@@ -6,6 +6,7 @@
         xmlns:input="clr-namespace:Avalonia.Input;assembly=Avalonia.Base"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Host.MainWindow"
+        x:Name="RootWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="avares://Host/Assets/convertool-icon.ico"
         Title="{Binding HostTitle}">
@@ -45,18 +46,61 @@
                         <TextBlock FontWeight="SemiBold" FontSize="16" Text="{Binding InputHeader}"
                                    Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
                         <Border Classes="card" IsEnabled="{Binding CanEdit}" HorizontalAlignment="Stretch">
-                            <StackPanel Spacing="14">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <TextBlock Opacity="0.8" VerticalAlignment="Center" Text="{Binding InputPathLabel}" />
-                                    <Button Grid.Column="1" MinWidth="100" Content="{Binding InputBrowseLabel}"
+                            <StackPanel Spacing="12">
+                                <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Spacing="10">
+                                    <Button MinWidth="100" Content="{Binding InputBrowseLabel}"
                                             Command="{Binding BrowseInputCommand}" />
-                                </Grid>
-                                <TextBox x:Name="InputPathsBox" AcceptsReturn="True" MinHeight="90"
-                                         Watermark="{Binding InputPlaceholder}"
-                                         input:DragDrop.AllowDrop="True"
-                                         input:DragDrop.DragOver="OnInputDragOver"
-                                         input:DragDrop.Drop="OnInputDrop"
-                                         Text="{Binding InputPaths, Mode=TwoWay}" />
+                                    <Button MinWidth="100" Classes="secondary"
+                                            Content="{Binding InputClearAllLabel}"
+                                            Command="{Binding ClearAllInputCommand}"
+                                            IsEnabled="{Binding HasInputFiles}" />
+                                </StackPanel>
+                                <Border MinHeight="120"
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                        input:DragDrop.AllowDrop="True"
+                                        input:DragDrop.DragOver="OnInputDragOver"
+                                        input:DragDrop.Drop="OnInputDrop">
+                                    <Grid MinHeight="104">
+                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Text="{Binding InputPlaceholder}"
+                                                   TextWrapping="Wrap"
+                                                   Margin="16"
+                                                   Opacity="0.65"
+                                                   IsVisible="{Binding HasNoInputFiles}"
+                                                   IsHitTestVisible="False" />
+                                        <ScrollViewer MaxHeight="220" IsVisible="{Binding HasInputFiles}"
+                                                      VerticalScrollBarVisibility="Auto"
+                                                      HorizontalScrollBarVisibility="Disabled">
+                                            <ItemsControl ItemsSource="{Binding InputFiles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:InputFileItemVm">
+                                                        <Grid Margin="0,0,0,8"
+                                                              ColumnDefinitions="Auto,*,Auto"
+                                                              ColumnSpacing="10">
+                                                            <Viewbox Width="22" Height="22" VerticalAlignment="Center">
+                                                                <Path Fill="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                                                                      Stretch="Uniform"
+                                                                      Data="M6,2h7l5,5v13a2,2 0 0 1-2,2H6a2,2 0 0 1-2-2V4A2,2 0 0 1 6,2Z M13,2v6h6" />
+                                                            </Viewbox>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       Text="{Binding FileName}"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       ToolTip.Tip="{Binding FullPath}" />
+                                                            <Button Grid.Column="2" Classes="secondary"
+                                                                    MinWidth="56" Padding="8,4"
+                                                                    Content="{Binding #RootWindow.DataContext.InputRemoveLabel}"
+                                                                    Command="{Binding RemoveCommand}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>

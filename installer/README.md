@@ -1,6 +1,9 @@
-# ConverTool Installer (Local)
+# ConverTool Installer (维护者 / 从源码构建)
 
-This folder contains the local installer build setup for ConverTool (version in `ConverTool.iss` / `build-installer.ps1`, currently **1.0.0**).
+> **给最终用户：** 正式版的 `setup.exe` 已随 **[GitHub Releases](https://github.com/kckc7887/ConverTool/releases)** 发布，**无需**克隆仓库或运行本目录下的脚本即可安装。  
+> 只有在你需要**本地修改安装器**或**自行重打安装包**时，才需要按下文构建。
+
+本目录为 Inno Setup 工程（版本号见 `ConverTool.iss` / `build-installer.ps1` 中的参数，当前与主版本一致）。
 
 ## Prerequisites
 
@@ -19,7 +22,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\scripts\build-installer.ps1
 
 ## Output
 
-- `artifacts/ConverTool-v0.1.4-setup.exe`
+- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.0.1` 时对应 `ConverTool-v1.0.1-setup.exe`）
 
 ## 安装包图标在资源管理器里没变？
 

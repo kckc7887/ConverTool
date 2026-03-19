@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Concurrent;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -97,11 +99,10 @@ public sealed class MainWindowViewModel : ObservableObject
         OutputHeader = _hostI18n.T("host/section/output");
         InputPlaceholder = _hostI18n.T("host/input/placeholder");
         InputBrowseLabel = _hostI18n.T("host/input/browse");
+        InputRemoveLabel = _hostI18n.T("host/input/remove");
+        InputClearAllLabel = _hostI18n.T("host/input/clearAll");
         OutputBrowseLabel = _hostI18n.T("host/output/browse");
-        InputPathLabel = _hostI18n.T("host/input/pathLabel");
-        ConfigPlaceholder = HasPlugins
-            ? _hostI18n.T("host/config/activateByInput")
-            : _hostI18n.T("host/config/noPluginHint");
+        UpdateConfigPlaceholder();
         AddPluginLabel = _hostI18n.T("host/app/addPlugin");
         ManagePluginsLabel = _hostI18n.T("host/app/managePlugins");
         NoPluginHintLabel = _hostI18n.T("host/config/noPluginHint");
@@ -142,16 +143,18 @@ public sealed class MainWindowViewModel : ObservableObject
             EnableParallelProcessing = _userSettings.EnableParallelProcessing;
             Parallelism = Math.Clamp(_userSettings.Parallelism, 1, 8);
             KeepTemp = _userSettings.KeepTemp;
-            // Input paths are runtime data; keep it empty on next launch.
-            InputPaths = "";
+            // Input files are runtime data; collection starts empty on each launch.
         }
         finally
         {
             _loadingUserSettings = false;
         }
 
+        InputFiles.CollectionChanged += OnInputFilesCollectionChanged;
+
         StartCommand = new AsyncCommand(StartAsync);
         BrowseInputCommand = new AsyncCommand(BrowseInputAsync);
+        ClearAllInputCommand = new SyncCommand(() => InputFiles.Clear());
         BrowseOutputDirCommand = new AsyncCommand(BrowseOutputDirAsync);
         BrowseConfigPathCommand = new AsyncCommand<PathFieldVm>(BrowseConfigPathAsync);
         PauseCommand = new AsyncCommand(TogglePauseAsync);
@@ -188,8 +191,9 @@ public sealed class MainWindowViewModel : ObservableObject
     public string OutputHeader { get; private set; } = "";
     public string InputPlaceholder { get; private set; } = "";
     public string InputBrowseLabel { get; private set; } = "";
+    public string InputRemoveLabel { get; private set; } = "";
+    public string InputClearAllLabel { get; private set; } = "";
     public string OutputBrowseLabel { get; private set; } = "";
-    public string InputPathLabel { get; private set; } = "";
     public string ConfigPlaceholder { get; private set; } = "";
     public string ProcessPlaceholder { get; private set; } = "";
     public string OutputPlaceholder { get; private set; } = "";
@@ -209,22 +213,28 @@ public sealed class MainWindowViewModel : ObservableObject
     public string LanguageLabel { get; private set; } = "";
 
     // ---- inputs ----
-    private string _inputPaths = "";
-    public string InputPaths
-    {
-        get => _inputPaths;
-        set
-        {
-            if (!SetProperty(ref _inputPaths, value))
-            {
-                return;
-            }
+    public ObservableCollection<InputFileItemVm> InputFiles { get; } = new();
 
-            if (!_loadingUserSettings)
-            {
-                ReloadPluginContext();
-            }
+    public bool HasInputFiles => InputFiles.Count > 0;
+
+    public bool HasNoInputFiles => InputFiles.Count == 0;
+
+    private void OnInputFilesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        RaisePropertyChanged(nameof(HasInputFiles));
+        RaisePropertyChanged(nameof(HasNoInputFiles));
+        if (_loadingUserSettings)
+        {
+            return;
         }
+
+        UpdateConfigPlaceholder();
+        ReloadPluginContext();
+    }
+
+    private void RemoveInputFile(InputFileItemVm item)
+    {
+        InputFiles.Remove(item);
     }
 
     private string _outputDir = "";
@@ -271,6 +281,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public AsyncCommand StartCommand { get; }
     public AsyncCommand BrowseInputCommand { get; }
+    public ICommand ClearAllInputCommand { get; }
     public AsyncCommand BrowseOutputDirCommand { get; }
     public AsyncCommand<PathFieldVm> BrowseConfigPathCommand { get; }
     public AsyncCommand PauseCommand { get; }
@@ -301,6 +312,16 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public bool CanEdit => !_isBusy;
 
+    private void UpdateConfigPlaceholder()
+    {
+        ConfigPlaceholder = HasPlugins
+            ? (HasAnyInputPaths()
+                ? _hostI18n.T("host/config/placeholder")
+                : _hostI18n.T("host/config/activateByInput"))
+            : _hostI18n.T("host/config/noPluginHint");
+        RaisePropertyChanged(nameof(ConfigPlaceholder));
+    }
+
     private void ReloadHostStrings()
     {
         _pluginI18n.ClearCache();
@@ -315,13 +336,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
         InputPlaceholder = _hostI18n.T("host/input/placeholder");
         InputBrowseLabel = _hostI18n.T("host/input/browse");
+        InputRemoveLabel = _hostI18n.T("host/input/remove");
+        InputClearAllLabel = _hostI18n.T("host/input/clearAll");
         OutputBrowseLabel = _hostI18n.T("host/output/browse");
-        InputPathLabel = _hostI18n.T("host/input/pathLabel");
-        ConfigPlaceholder = HasPlugins
-            ? (HasAnyInputPaths()
-                ? _hostI18n.T("host/config/placeholder")
-                : _hostI18n.T("host/config/activateByInput"))
-            : _hostI18n.T("host/config/noPluginHint");
+        UpdateConfigPlaceholder();
         NoPluginHintLabel = _hostI18n.T("host/config/noPluginHint");
         AddPluginLabel = _hostI18n.T("host/app/addPlugin");
         ManagePluginsLabel = _hostI18n.T("host/app/managePlugins");
@@ -348,9 +366,9 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(OutputHeader));
         RaisePropertyChanged(nameof(InputPlaceholder));
         RaisePropertyChanged(nameof(InputBrowseLabel));
+        RaisePropertyChanged(nameof(InputRemoveLabel));
+        RaisePropertyChanged(nameof(InputClearAllLabel));
         RaisePropertyChanged(nameof(OutputBrowseLabel));
-        RaisePropertyChanged(nameof(InputPathLabel));
-        RaisePropertyChanged(nameof(ConfigPlaceholder));
         RaisePropertyChanged(nameof(AddPluginLabel));
         RaisePropertyChanged(nameof(ManagePluginsLabel));
         RaisePropertyChanged(nameof(NoPluginHintLabel));
@@ -672,11 +690,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private PluginEntry? ResolveActivePlugin()
     {
-        var firstInput = (InputPaths ?? "")
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
-
+        var firstInput = InputFiles.FirstOrDefault()?.FullPath;
         if (string.IsNullOrWhiteSpace(firstInput))
         {
             return null;
@@ -685,12 +699,7 @@ public sealed class MainWindowViewModel : ObservableObject
         return PluginRouter.RouteByInputPath(_catalog, firstInput) ?? _catalog.Plugins.FirstOrDefault();
     }
 
-    private bool HasAnyInputPaths()
-    {
-        return (InputPaths ?? "")
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Any(s => !string.IsNullOrWhiteSpace(s));
-    }
+    private bool HasAnyInputPaths() => InputFiles.Count > 0;
 
     private async Task StartAsync()
     {
@@ -710,11 +719,7 @@ public sealed class MainWindowViewModel : ObservableObject
             ProgressText = "";
             BatchText = "";
 
-            var inputPaths = (InputPaths ?? "")
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .ToArray();
+            var inputPaths = InputFiles.Select(f => f.FullPath).ToArray();
 
             if (inputPaths.Length == 0)
             {
@@ -729,6 +734,12 @@ public sealed class MainWindowViewModel : ObservableObject
             else
             {
                 await RunSerialAsync(inputPaths, ct);
+            }
+
+            // 本轮任务已跑完且未取消时，清空输入列表，便于继续下一批。
+            if (!ct.IsCancellationRequested)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => InputFiles.Clear());
             }
         }
         finally
@@ -1260,24 +1271,13 @@ public sealed class MainWindowViewModel : ObservableObject
         _catalog = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
         AppServices.Plugins = _catalog;
         HasPlugins = _catalog.Plugins.Count > 0;
-        ConfigPlaceholder = HasPlugins
-            ? (HasAnyInputPaths()
-                ? _hostI18n.T("host/config/placeholder")
-                : _hostI18n.T("host/config/activateByInput"))
-            : _hostI18n.T("host/config/noPluginHint");
-        RaisePropertyChanged(nameof(ConfigPlaceholder));
+        UpdateConfigPlaceholder();
 
         ReloadPluginContext();
     }
 
     public void AddInputPaths(IEnumerable<string> paths)
     {
-        var current = (InputPaths ?? "")
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => s.Trim())
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .ToList();
-
         foreach (var p in paths)
         {
             var trimmed = (p ?? "").Trim();
@@ -1286,13 +1286,13 @@ public sealed class MainWindowViewModel : ObservableObject
                 continue;
             }
 
-            if (!current.Contains(trimmed, StringComparer.OrdinalIgnoreCase))
+            if (InputFiles.Any(x => string.Equals(x.FullPath, trimmed, StringComparison.OrdinalIgnoreCase)))
             {
-                current.Add(trimmed);
+                continue;
             }
-        }
 
-        InputPaths = string.Join(Environment.NewLine, current);
+            InputFiles.Add(new InputFileItemVm(trimmed, RemoveInputFile));
+        }
     }
 
     private void UpdateBatch(int completed, int total, string stage)

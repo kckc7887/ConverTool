@@ -1,7 +1,8 @@
 # ConverTool
 
-轻量级桌面文件转换工具（Avalonia + 插件架构）。**v1.0.0** 起默认附带两个基础插件，安装后即可转换常见视频与图片格式；也可在「插件管理」中安装更多 `.zip` 插件。
+轻量级桌面文件转换工具（Avalonia + 插件架构）。**v1.0** 起默认附带两个基础插件，安装后即可转换常见视频与图片格式；也可在「插件管理」中安装更多 `.zip` 插件。
 
+- **下载安装（Windows）**：[GitHub Releases](https://github.com/kckc7887/ConverTool/releases) 提供 **安装程序 `setup.exe`** 以及 **免安装 zip（full / lite）**，无需自行编译。
 - **详细说明（含使用方法与技术文档）** → [docs/README.md](docs/README.md)
 
 ## 内置基础插件（默认附带）

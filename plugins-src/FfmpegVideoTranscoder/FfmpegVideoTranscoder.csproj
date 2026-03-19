@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConverTool.PluginAbstractions" Version="0.1.0" />
+    <PackageReference Include="ConverTool.PluginAbstractions" Version="1.0.0" />
   </ItemGroup>
 
 </Project>

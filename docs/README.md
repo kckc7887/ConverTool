@@ -1,12 +1,14 @@
 # ConverTool
 
+> **当前主线版本：Host v1.0.1**（契约包 `ConverTool.PluginAbstractions` **1.0.0**；历史版本说明见 [`docs/releases/`](releases/)。）
+
 ConverTool 是一个“轻量化的跨平台文件转换器骨架”：它用 Avalonia 做 UI，并通过动态加载的插件（.NET DLL）来完成真正的转换逻辑。Host 负责把输入文件路由到对应插件、提供配置 UI、创建临时目录、接收插件日志/进度/完成信息，并将临时产物按命名模板移动到最终输出目录。
 
 ## 使用方法（普通用户）
 
 1. 启动 ConverTool
 2. 插件：打开“插件管理” -> “添加插件”安装你的 `*.zip` 插件
-3. 输入：把要转换的文件拖拽进输入框（每行一个）
+3. 输入：点击「浏览」选择文件，或将文件**拖拽到输入区**；已选文件以**图标 + 文件名**列表显示，可点「×」移除。
 4. 配置与目标：根据插件提供的目标格式选择输出，并填写配置项
 5. 输出：设置输出目录/命名模板（可选），点击“Start”
 6. 日志与结果：处理过程会在日志区域实时显示，完成后结果会列出到输出区域
@@ -161,7 +163,7 @@ Host 在启动时通过 `PluginCatalog.LoadFromOutput(AppContext.BaseDirectory)`
 
 `MainWindowViewModel.ReloadPluginContext()`：
 
-1. 通过输入框的“第一行输入”确定“激活插件”（`ResolveActivePlugin`）
+1. 通过输入文件列表中的**第一个文件**确定“激活插件”（`ResolveActivePlugin`）
 2. 将激活插件的：
    - `SupportedTargetFormats` 显示为目标格式下拉
    - `ConfigSchema.Sections[].Fields[]` 动态生成配置控件
@@ -177,7 +179,7 @@ Host 在启动时通过 `PluginCatalog.LoadFromOutput(AppContext.BaseDirectory)`
 
 Host 会：
 
-- 从 `InputPaths`（多行文本）解析输入文件列表
+- 从 `InputFiles` 集合得到输入文件路径列表
 - 根据 `EnableParallelProcessing` 选择：
   - 串行：`RunSerialAsync`
   - 并行：`RunParallelAsync`（用 `SemaphoreSlim` 控制并发）
@@ -268,9 +270,9 @@ Host 会用 `VmReporter` 适配回调：
 
 ## 7. 目前实现的一个重要使用注意点（混合扩展名批处理）
 
-当前 Host 的配置 UI 是“按第一行输入选激活插件”：
+当前 Host 的配置 UI 是“按列表中第一个输入文件选激活插件”：
 
-- `ReloadPluginContext()` 使用 `InputPaths` 的第一条输入来决定激活插件，从而决定配置控件与目标格式选择
+- `ReloadPluginContext()` 使用 `InputFiles` 中第一项的路径来决定激活插件，从而决定配置控件与目标格式选择
 
 但执行时（串行/并行）是“对每个输入文件单独路由到匹配插件”：
 
