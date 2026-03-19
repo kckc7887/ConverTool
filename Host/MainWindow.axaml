@@ -83,12 +83,16 @@
                                                                      Text="{Binding Text, Mode=TwoWay}" />
                                                         </DataTemplate>
                                                         <DataTemplate x:DataType="vm:RangeFieldVm">
-                                                            <Grid ColumnDefinitions="*,100" ColumnSpacing="12">
+                                                            <!-- Slider column is Auto + capped width: avoid * eating full config width -->
+                                                            <Grid ColumnDefinitions="Auto,*,80" ColumnSpacing="12" VerticalAlignment="Center">
                                                                 <Slider Minimum="{Binding Min}" Maximum="{Binding Max}"
                                                                         Value="{Binding Value, Mode=TwoWay}"
                                                                         IsSnapToTickEnabled="{Binding IsSnapToTickEnabled}"
-                                                                        TickFrequency="{Binding TickFrequency}" />
-                                                                <TextBox Width="80" Text="{Binding ValueText, Mode=TwoWay}" />
+                                                                        TickFrequency="{Binding TickFrequency}"
+                                                                        MinWidth="120" MaxWidth="280"
+                                                                        HorizontalAlignment="Left" />
+                                                                <TextBox Grid.Column="2" Width="80" HorizontalAlignment="Right"
+                                                                         Text="{Binding ValueText, Mode=TwoWay}" />
                                                             </Grid>
                                                         </DataTemplate>
                                                         <DataTemplate x:DataType="vm:CheckboxFieldVm">
