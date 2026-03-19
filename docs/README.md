@@ -6,9 +6,9 @@ ConverTool 是一个“轻量化的跨平台文件转换器骨架”：它用 Av
 
 - 架构/协议/实现细节：`docs/technical/README.md`
 
-<details>
-<summary>展开查看（已移至新文档）</summary>
+（技术细节见 `docs/technical/README.md`）
 
+<!-- 下面这段技术内容已移至 `docs/technical/README.md`，这里不再展示给普通用户。
 下面这份文档以“当前代码实际实现”为主，系统性描述底层架构、协议/数据结构、执行方式与关键约束。
 
 ## 1. 总体架构
@@ -322,5 +322,5 @@ dotnet publish .\Host\Host.csproj -c Release -r win-x64 --self-contained false -
 
 
 
-</details>
+-->
 
