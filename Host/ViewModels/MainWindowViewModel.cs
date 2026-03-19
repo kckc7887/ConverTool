@@ -303,6 +303,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void ReloadHostStrings()
     {
+        _pluginI18n.ClearCache();
+
         HostTitle = _hostI18n.T("host/app/title");
         LanguageLabel = _hostI18n.T("host/app/language");
 

@@ -1,4 +1,4 @@
-﻿{
+{
   "strings": {
     "plugin/imagemagick.image.transcoder/title": "ImageMagick Image Transcoder",
     "plugin/imagemagick.image.transcoder/description": "Convert images using ImageMagick (magick CLI).",
@@ -7,7 +7,8 @@
     "plugin/imagemagick.image.transcoder/target/jpg": "JPG (smaller size)",
     "plugin/imagemagick.image.transcoder/target/jpeg": "JPEG (smaller size)",
     "plugin/imagemagick.image.transcoder/target/bmp": "BMP (uncompressed)",
-    "plugin/imagemagick.image.transcoder/target/gif": "GIF (high compatibility)",    "plugin/imagemagick.image.transcoder/target/tiff": "TIFF (print/archive)",
+    "plugin/imagemagick.image.transcoder/target/gif": "GIF (high compatibility)",
+    "plugin/imagemagick.image.transcoder/target/tiff": "TIFF (print/archive)",
     "plugin/imagemagick.image.transcoder/target/webp": "WebP (web optimized)",
     "plugin/imagemagick.image.transcoder/target/avif": "AVIF (high compression)",
     "plugin/imagemagick.image.transcoder/target/ico": "ICO (icon file)"

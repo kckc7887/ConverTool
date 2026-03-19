@@ -44,13 +44,21 @@ public sealed class PluginI18nService
             return existing;
         }
 
-        var dict = LoadStrings(entry, locale);
-        _cache[cacheKey] = dict;
+        var (dict, cacheable) = LoadStrings(entry, locale);
+        if (cacheable)
+        {
+            _cache[cacheKey] = dict;
+        }
+
         return dict;
     }
 
-    private static Dictionary<string, string> LoadStrings(PluginEntry entry, string locale)
+    /// <summary>
+    /// cacheable=false when the locale file exists but failed to parse, so fixes apply without restarting the app.
+    /// </summary>
+    private static (Dictionary<string, string> dict, bool cacheable) LoadStrings(PluginEntry entry, string locale)
     {
+        var empty = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             var localesFolder = entry.Manifest.I18n?.LocalesFolder;
@@ -62,14 +70,14 @@ public sealed class PluginI18nService
             var path = Path.Combine(entry.PluginDir, localesFolder, $"{locale}.json");
             if (!File.Exists(path))
             {
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return (empty, cacheable: true);
             }
 
             using var stream = File.OpenRead(path);
             using var doc = JsonDocument.Parse(stream);
             if (!doc.RootElement.TryGetProperty("strings", out var stringsEl) || stringsEl.ValueKind != JsonValueKind.Object)
             {
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return (empty, cacheable: true);
             }
 
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -81,12 +89,16 @@ public sealed class PluginI18nService
                 }
             }
 
-            return dict;
+            return (dict, cacheable: true);
         }
         catch
         {
-            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // Invalid JSON / IO errors: do not cache so a corrected file is picked up on next lookup.
+            return (empty, cacheable: false);
         }
     }
+
+    /// <summary>Clears loaded plugin locale cache (e.g. after switching UI language).</summary>
+    public void ClearCache() => _cache.Clear();
 }
 

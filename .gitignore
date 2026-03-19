@@ -36,3 +36,6 @@ plugins-dist/
 # Local archive for old versions
 old-versions/
 
+# Local test installs / smoke output (large binaries; not for git)
+Tests/
+

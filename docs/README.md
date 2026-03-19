@@ -11,6 +11,17 @@ ConverTool 是一个“轻量化的跨平台文件转换器骨架”：它用 Av
 5. 输出：设置输出目录/命名模板（可选），点击“Start”
 6. 日志与结果：处理过程会在日志区域实时显示，完成后结果会列出到输出区域
 
+## 内置基础插件（默认附带）
+
+发行版与源码中的 `Host/plugins/`（或安装目录下的 `plugins/`）**默认包含**两个插件，一般无需再单独安装即可使用：
+
+| 插件 ID | 功能 | 使用前提 |
+|---------|------|----------|
+| `ffmpeg.video.transcoder` | 视频转码（MP4 / MKV / MOV / WebM / AVI 等） | 本机已安装 **ffmpeg** 并在 **PATH** 中可用。 |
+| `imagemagick.image.transcoder` | 图片格式互转（PNG、JPEG、WebP、TIFF、ICO 等） | 优先使用 **PATH** 中的 `magick`；若无，插件会尝试自动下载便携 ImageMagick（详见插件实现与日志）。 |
+
+仍可在 **插件管理** 中通过 `.zip` 安装、更新或增删其他插件。
+
 ## 技术细节（展开查看）
 
 <details>
