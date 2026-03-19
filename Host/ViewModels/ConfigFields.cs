@@ -106,19 +106,65 @@ public sealed class PathFieldVm : ConfigFieldVm
 public sealed class RangeFieldVm : ConfigFieldVm
 {
     private double _value;
+    private const double MaxTickCountForUi = 2000;
 
     public RangeFieldVm(string key, string label, string? help, double min, double max, double step, double defaultValue)
         : base(key, label, help)
     {
-        Min = min;
-        Max = max;
-        Step = step <= 0 ? 1 : step;
+        // Be defensive: malformed plugins might provide Min > Max.
+        if (min <= max)
+        {
+            Min = min;
+            Max = max;
+        }
+        else
+        {
+            Min = max;
+            Max = min;
+        }
+
+        // Step is only used for UI snapping/ticks; keep it finite and positive.
+        Step = step <= 0 || double.IsNaN(step) || double.IsInfinity(step) ? 1 : step;
         _value = ClampToRange(defaultValue);
+
+        var span = Max - Min;
+        if (span <= 0 || double.IsNaN(span) || double.IsInfinity(span))
+        {
+            TickFrequency = 1;
+            IsSnapToTickEnabled = false;
+            return;
+        }
+
+        var tickCount = span / Step;
+        if (tickCount <= 0 || double.IsNaN(tickCount) || double.IsInfinity(tickCount))
+        {
+            TickFrequency = 1;
+            IsSnapToTickEnabled = false;
+            return;
+        }
+
+        // If tick count is too high, Avalonia slider snapping can become extremely slow / unresponsive.
+        if (tickCount > MaxTickCountForUi)
+        {
+            IsSnapToTickEnabled = false;
+            TickFrequency = span / MaxTickCountForUi;
+            if (TickFrequency <= 0 || double.IsNaN(TickFrequency) || double.IsInfinity(TickFrequency))
+            {
+                TickFrequency = 1;
+            }
+        }
+        else
+        {
+            IsSnapToTickEnabled = true;
+            TickFrequency = Step;
+        }
     }
 
     public double Min { get; }
     public double Max { get; }
     public double Step { get; }
+    public double TickFrequency { get; }
+    public bool IsSnapToTickEnabled { get; }
 
     public double Value
     {

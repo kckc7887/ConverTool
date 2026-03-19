@@ -15,3 +15,6 @@
 # Local checkout of the contract repo (separate git repo)
 PluginAbstractions/
 
+# Build / publish output (release zips, etc.)
+artifacts/
+

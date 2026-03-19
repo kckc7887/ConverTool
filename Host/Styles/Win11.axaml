@@ -141,14 +141,8 @@
     <Setter Property="CornerRadius" Value="4" />
   </Style>
 
-  <!-- Slider -->
-  <Style Selector="Slider">
-    <Setter Property="Transitions">
-      <Transitions>
-        <DoubleTransition Property="Value" Duration="0:0:0.1" />
-      </Transitions>
-    </Setter>
-  </Style>
+  <!-- Slider: intentionally no global style — do not add DoubleTransition on Slider.Value:
+       TwoWay binding + Value transition can feedback-loop and freeze/crash (Avalonia). -->
 
   <!-- CheckBox -->
   <Style Selector="CheckBox">
