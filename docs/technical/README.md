@@ -1,14 +1,6 @@
-# ConverTool
+# ConverTool 项目介绍
 
 ConverTool 是一个“轻量化的跨平台文件转换器骨架”：它用 Avalonia 做 UI，并通过动态加载的插件（.NET DLL）来完成真正的转换逻辑。Host 负责把输入文件路由到对应插件、提供配置 UI、创建临时目录、接收插件日志/进度/完成信息，并将临时产物按命名模板移动到最终输出目录。
-
-## 技术文档
-
-- 架构/协议/实现细节：`docs/technical/README.md`
-
-<details>
-<summary>展开查看（已移至新文档）</summary>
-
 下面这份文档以“当前代码实际实现”为主，系统性描述底层架构、协议/数据结构、执行方式与关键约束。
 
 ## 1. 总体架构
@@ -149,8 +141,9 @@ Host 在启动时通过 `PluginCatalog.LoadFromOutput(AppContext.BaseDirectory)`
    - `ConfigSchema.Sections[].Fields[]` 动态生成配置控件
 
 控件创建会用到字段的：
+
 - `Type`（字符串，如 `Checkbox/Select/Range/Text/Path`）
-- `LabelKey` / `HelpKey`（由 `PluginI18nService` 翻译）
+- `labelKey` / `HelpKey`（由 `PluginI18nService` 翻译）
 - `DefaultValue`（按字段类型转换成 Host 内部默认值）
 
 ## 5. 执行方式：串行/并行、临时目录与落盘输出
@@ -242,7 +235,7 @@ Host 会用 `VmReporter` 适配回调：
    - 找到唯一的 `manifest.json`
    - 以 `manifest.json` 所在目录为源目录，把整个目录递归复制到 `AppContext.BaseDirectory/plugins/<pluginId>/`
 
-因此：你可以在 zip 里把 `ffmpeg.exe`、`ffmpeg` 依赖 dll/资源文件一起放在 `<pluginId>/` 目录结构中，只要你的插件运行时能用正确的路径找到它即可。
+因此：你可以在 zip 里把 `ffmpeg.exe`、`ffmpeg` 依赖 dll/资源文件一起放在 `<pluginId>/` 目录结构中，只要你的插件运行时能用正确的路径找到它们。
 
 仍需注意一条硬约束：
 
@@ -292,13 +285,11 @@ dotnet publish .\Host\Host.csproj -c Release -r win-x64 --self-contained false -
 
 ### 8.3 把插件打包成 zip 并安装到本地 Host
 
-1) 按约定打包插件目录为 zip（要求：zip 解压后目录树里能找到且只能找到一个 `manifest.json`）。
-
-2) 打开本地 `Host.exe`：
-- “插件管理” → “添加插件” → 选择你的插件 zip
-
-3) Host 会把你 zip 里 `manifest.json` 所在目录的整棵目录复制到：
-`AppContext.BaseDirectory/plugins/<pluginId>/`
+1. 按约定打包插件目录为 zip（要求：zip 解压后目录树里能找到且只能找到一个 `manifest.json`）。
+2. 打开本地 `Host.exe`：
+   - “插件管理” → “添加插件” → 选择你的插件 zip
+3. Host 会把你 zip 里 `manifest.json` 所在目录的整棵目录复制到：
+   `AppContext.BaseDirectory/plugins/<pluginId>/`
 
 > 因此 zip 里可以携带 ffmpeg 等外部引擎文件（放在你的插件目录结构下），只要你的插件运行时能用正确路径找到它们。
 
@@ -319,8 +310,3 @@ dotnet publish .\Host\Host.csproj -c Release -r win-x64 --self-contained false -
 - `Host/Plugins/`：`PluginCatalog` / `PluginRouter` / **`PluginZipInstaller`**（主窗口与插件管理共用的 zip 安装逻辑）
 - `Host/Settings/`：`UserSettingsStore`（JSON 读写）
 - `plugins-src/`：仓库内示例插件源码（构建产物见 `.gitignore`，勿提交 `bin/obj/out/dist`）
-
-
-
-</details>
-
