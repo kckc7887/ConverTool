@@ -103,45 +103,88 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
         var outputRelative = $"output.{targetExt}";
         var outputPath = Path.Combine(context.TempJobDir, outputRelative);
 
+        static string? GetString(IReadOnlyDictionary<string, object?> dict, string key)
+        {
+            if (!dict.TryGetValue(key, out var v) || v is null)
+            {
+                return null;
+            }
+            return v switch
+            {
+                string s => s,
+                _ => v.ToString()
+            };
+        }
+
+        static bool GetBool(IReadOnlyDictionary<string, object?> dict, string key, bool defaultValue)
+        {
+            if (!dict.TryGetValue(key, out var v) || v is null)
+            {
+                return defaultValue;
+            }
+
+            if (v is bool b)
+            {
+                return b;
+            }
+
+            var s = v.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return defaultValue;
+            }
+
+            return bool.TryParse(s, out var parsed) ? parsed : defaultValue;
+        }
+
+        static decimal GetDecimal(IReadOnlyDictionary<string, object?> dict, string key, decimal defaultValue)
+        {
+            if (!dict.TryGetValue(key, out var v) || v is null)
+            {
+                return defaultValue;
+            }
+
+            var s = v.ToString()?.Trim();
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return defaultValue;
+            }
+
+            // Be forgiving for locale separators.
+            s = s.Replace(',', '.');
+            return decimal.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+                ? parsed
+                : defaultValue;
+        }
+
+        // ImageMagick target-size compression options (driven by Host config schema).
+        var enableTargetSizeCompression = GetBool(context.SelectedConfig, "enableTargetSizeCompression", defaultValue: false);
+        var retainTargetSizeCompressionSettings = GetBool(context.SelectedConfig, "retainTargetSizeCompressionSettings", defaultValue: false);
+        var targetSizeUnit = GetString(context.SelectedConfig, "targetSizeUnit")?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(targetSizeUnit))
+        {
+            targetSizeUnit = "KB";
+        }
+
+        var targetSizeMinValue = GetDecimal(context.SelectedConfig, "targetSizeMinKb", defaultValue: 0);
+        var targetSizeMaxValue = GetDecimal(context.SelectedConfig, "targetSizeMaxKb", defaultValue: 0);
+
+        static bool IsLosslessTarget(string ext)
+            => ext is "png" or "bmp" or "gif" or "tiff" or "tif";
+
+        // Lossless targets are explicitly disallowed when target-size compression is enabled.
+        if (enableTargetSizeCompression && IsLosslessTarget(targetExt))
+        {
+            reporter.OnFailed(new FailedInfo(
+                "Target size compression is enabled, but selected a lossless target format (PNG/BMP/GIF/TIFF). Please disable target size compression or choose a lossy format.",
+                "TARGET_SIZE_COMPRESSION_LOSSLESS_NOT_ALLOWED"));
+            return;
+        }
+
         reporter.OnLog($"[imagemagick] input={inputPath}");
         reporter.OnLog($"[imagemagick] output={outputPath}");
 
         var magickPath = await EnsureMagickAsync(reporter, cancellationToken).ConfigureAwait(false);
-
-        using var p = new Process();
-        p.StartInfo = new ProcessStartInfo
-        {
-            FileName = magickPath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(magickPath) ?? Environment.CurrentDirectory
-        };
-
-        // Portable ImageMagick may require its sibling DLLs/delegates.
-        // Prepend the magick directory to PATH for better DLL resolution.
-        var magickDir = Path.GetDirectoryName(magickPath);
-        if (!string.IsNullOrWhiteSpace(magickDir))
-        {
-            var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            p.StartInfo.EnvironmentVariables["PATH"] = magickDir + ";" + currentPath;
-        }
-
-        // magick <input> [options] <output>
-        p.StartInfo.ArgumentList.Add(inputPath);
-
-        // ICO has strict size limits. Constrain source and emit common icon sizes
-        // to avoid "width or height exceeds limit" for large images.
-        if (string.Equals(targetExt, "ico", StringComparison.OrdinalIgnoreCase))
-        {
-            p.StartInfo.ArgumentList.Add("-resize");
-            p.StartInfo.ArgumentList.Add("256x256>");
-            p.StartInfo.ArgumentList.Add("-define");
-            p.StartInfo.ArgumentList.Add("icon:auto-resize=256,128,64,48,32,16");
-        }
-
-        p.StartInfo.ArgumentList.Add(outputPath);
 
         var lastLines = new Queue<string>(capacity: 80);
         var sync = new object();
@@ -160,70 +203,243 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
             }
         }
 
-        p.OutputDataReceived += (_, e) => HandleLine(e.Data);
-        p.ErrorDataReceived += (_, e) => HandleLine(e.Data);
+        // Stable PATH for portable ImageMagick.
+        var magickDir = Path.GetDirectoryName(magickPath);
+        var currentPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var effectivePath = !string.IsNullOrWhiteSpace(magickDir) ? magickDir + ";" + currentPath : currentPath;
 
-        // Cancellation: terminate process tree (Host requires supportsTerminationOnCancel=true).
-        using var _ = cancellationToken.Register(() =>
+        async Task<(bool Ok, long? SizeBytes, string? ErrorMessage)> RunEncodeAsync(int? quality, string outPath)
         {
+            using var p = new Process();
+            p.StartInfo = new ProcessStartInfo
+            {
+                FileName = magickPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetDirectoryName(magickPath) ?? Environment.CurrentDirectory
+            };
+
+            if (!string.IsNullOrWhiteSpace(effectivePath))
+            {
+                p.StartInfo.EnvironmentVariables["PATH"] = effectivePath;
+            }
+
+            // magick <input> [options] <output>
+            p.StartInfo.ArgumentList.Add(inputPath);
+
+            if (quality is not null)
+            {
+                // -quality is accepted by common lossy coders in ImageMagick.
+                p.StartInfo.ArgumentList.Add("-quality");
+                p.StartInfo.ArgumentList.Add(quality.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            // ICO has strict size limits. Constrain source and emit common icon sizes
+            // to avoid "width or height exceeds limit" for large images.
+            if (string.Equals(targetExt, "ico", StringComparison.OrdinalIgnoreCase))
+            {
+                p.StartInfo.ArgumentList.Add("-resize");
+                p.StartInfo.ArgumentList.Add("256x256>");
+                p.StartInfo.ArgumentList.Add("-define");
+                p.StartInfo.ArgumentList.Add("icon:auto-resize=256,128,64,48,32,16");
+            }
+
+            p.StartInfo.ArgumentList.Add(outPath);
+
+            p.OutputDataReceived += (_, e) => HandleLine(e.Data);
+            p.ErrorDataReceived += (_, e) => HandleLine(e.Data);
+
+            using var _ = cancellationToken.Register(() =>
+            {
+                try
+                {
+                    if (!p.HasExited)
+                        p.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                    // best effort
+                }
+            });
+
             try
             {
-                if (!p.HasExited)
-                    p.Kill(entireProcessTree: true);
+                reporter.OnProgress(new ProgressInfo(ProgressStage.Preparing, 100));
+                reporter.OnProgress(new ProgressInfo(ProgressStage.Running, 0));
+
+                reporter.OnLog($"[imagemagick] exec: {Path.GetFileName(magickPath)} q={(quality.HasValue ? quality.Value.ToString() : "-") } ext={targetExt}");
+
+                p.Start();
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+                await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+
+                reporter.OnProgress(new ProgressInfo(ProgressStage.Finalizing, 100));
             }
-            catch
+            catch (OperationCanceledException)
             {
-                // best effort
+                return (Ok: false, SizeBytes: null, ErrorMessage: "Canceled.");
             }
-        });
-
-        try
-        {
-            reporter.OnProgress(new ProgressInfo(ProgressStage.Preparing, 100));
-            reporter.OnProgress(new ProgressInfo(ProgressStage.Running, 0));
-
-            reporter.OnLog($"[imagemagick] exec: {Path.GetFileName(magickPath)} {targetExt}");
-
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
-
-            await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-            reporter.OnProgress(new ProgressInfo(ProgressStage.Finalizing, 100));
-        }
-        catch (OperationCanceledException)
-        {
-            reporter.OnFailed(new FailedInfo("Canceled.", "CANCELED"));
-            return;
-        }
-        catch (Exception ex)
-        {
-            reporter.OnFailed(new FailedInfo($"Failed to run ImageMagick: {ex.Message}", "IMAGEMAGICK_LAUNCH_FAILED"));
-            return;
-        }
-
-        if (p.ExitCode != 0)
-        {
-            string tail;
-            lock (sync)
+            catch (Exception ex)
             {
-                tail = string.Join(Environment.NewLine, lastLines);
+                return (Ok: false, SizeBytes: null, ErrorMessage: $"Failed to run ImageMagick: {ex.Message}");
             }
-            reporter.OnFailed(new FailedInfo($"ImageMagick failed (exit={p.ExitCode}).\n{tail}", "IMAGEMAGICK_FAILED"));
+
+            if (p.ExitCode != 0)
+            {
+                string tail;
+                lock (sync)
+                {
+                    tail = string.Join(Environment.NewLine, lastLines);
+                }
+                return (Ok: false, SizeBytes: null, ErrorMessage: $"ImageMagick failed (exit={p.ExitCode}).\n{tail}");
+            }
+
+            if (!File.Exists(outPath))
+            {
+                return (Ok: false, SizeBytes: null, ErrorMessage: "ImageMagick completed but output file not found.");
+            }
+
+            return (Ok: true, SizeBytes: new FileInfo(outPath).Length, ErrorMessage: null);
+        }
+
+        // Target-size compression search (binary search over quality).
+        if (enableTargetSizeCompression &&
+            (targetExt is "jpg" or "jpeg" or "webp" or "avif"))
+        {
+            const long kbBytes = 1024;
+            const long mbBytes = 1024 * 1024;
+
+            long minBytes = targetSizeMinValue <= 0 ? 0 : (long)(targetSizeUnit == "MB" ? targetSizeMinValue * mbBytes : targetSizeMinValue * kbBytes);
+            long maxBytes = targetSizeMaxValue <= 0 ? long.MaxValue : (long)(targetSizeUnit == "MB" ? targetSizeMaxValue * mbBytes : targetSizeMaxValue * kbBytes);
+
+            if (maxBytes < minBytes)
+            {
+                (minBytes, maxBytes) = (maxBytes, minBytes);
+            }
+
+            // Cache key: target format + range.
+            var cacheKey = $"{targetExt}|{minBytes}|{maxBytes}";
+            int? cachedQuality = null;
+            if (retainTargetSizeCompressionSettings)
+            {
+                if (_qualityCache.TryGetValue(cacheKey, out var q))
+                {
+                    cachedQuality = q;
+                }
+            }
+
+            reporter.OnLog($"[imagemagick] target-size q-search unit={targetSizeUnit} minBytes={minBytes} maxBytes={maxBytes}");
+
+            var trialBest = (Quality: (int?)null, Size: (long?)null, Dist: long.MaxValue);
+            string? lastError = null;
+
+            // First: try cached quality if available.
+            if (cachedQuality is int cq)
+            {
+                var r = await RunEncodeAsync(cq, outputPath).ConfigureAwait(false);
+                if (r.Ok && r.SizeBytes is not null)
+                {
+                    var size = r.SizeBytes.Value;
+                    if (size >= minBytes && size <= maxBytes)
+                    {
+                        reporter.OnCompleted(new CompletedInfo(OutputRelativePath: outputRelative, OutputSuggestedExt: targetExt));
+                        return;
+                    }
+
+                    trialBest = (Quality: cq, Size: size, Dist: ComputeDist(size, minBytes, maxBytes));
+                }
+                else
+                {
+                    lastError = r.ErrorMessage;
+                }
+            }
+
+            // Binary search across quality.
+            int lowQ = 5;
+            int highQ = 95;
+
+            for (var iter = 0; iter < 10 && lowQ <= highQ; iter++)
+            {
+                var midQ = (lowQ + highQ) / 2;
+                var r = await RunEncodeAsync(midQ, outputPath).ConfigureAwait(false);
+                if (!r.Ok || r.SizeBytes is null)
+                {
+                    lastError = r.ErrorMessage;
+                    break;
+                }
+
+                var size = r.SizeBytes.Value;
+                var dist = ComputeDist(size, minBytes, maxBytes);
+                if (dist < trialBest.Dist)
+                {
+                    trialBest = (Quality: midQ, Size: size, Dist: dist);
+                }
+
+                if (size >= minBytes && size <= maxBytes)
+                {
+                    if (retainTargetSizeCompressionSettings && trialBest.Quality is int qOk)
+                    {
+                        _qualityCache[cacheKey] = qOk;
+                    }
+
+                    reporter.OnCompleted(new CompletedInfo(OutputRelativePath: outputRelative, OutputSuggestedExt: targetExt));
+                    return;
+                }
+
+                // size monotonic: lower quality => smaller file
+                if (size > maxBytes)
+                {
+                    highQ = midQ - 1;
+                }
+                else if (size < minBytes)
+                {
+                    lowQ = midQ + 1;
+                }
+            }
+
+            // Not found in range: keep best.
+            if (retainTargetSizeCompressionSettings && trialBest.Quality is int qBest)
+            {
+                _qualityCache[cacheKey] = qBest;
+            }
+
+            if (!File.Exists(outputPath))
+            {
+                reporter.OnFailed(new FailedInfo(lastError ?? "Failed to generate compressed output.", "IMAGEMAGICK_FAILED"));
+                return;
+            }
+
+            reporter.OnCompleted(new CompletedInfo(OutputRelativePath: outputRelative, OutputSuggestedExt: targetExt));
             return;
         }
 
-        if (!File.Exists(outputPath))
+        // Fallback: single conversion (no target-size compression / non-lossy format / search skipped).
         {
-            reporter.OnFailed(new FailedInfo("ImageMagick completed but output file not found.", "OUTPUT_MISSING"));
-            return;
+            var r = await RunEncodeAsync(quality: null, outputPath).ConfigureAwait(false);
+            if (!r.Ok)
+            {
+                reporter.OnFailed(new FailedInfo(r.ErrorMessage ?? "ImageMagick conversion failed.", "IMAGEMAGICK_FAILED"));
+                return;
+            }
         }
 
         reporter.OnCompleted(new CompletedInfo(
             OutputRelativePath: outputRelative,
             OutputSuggestedExt: targetExt
         ));
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _qualityCache =
+        new(System.StringComparer.OrdinalIgnoreCase);
+
+    private static long ComputeDist(long size, long minBytes, long maxBytes)
+    {
+        if (size >= minBytes && size <= maxBytes) return 0;
+        if (size < minBytes) return minBytes - size;
+        return size - maxBytes;
     }
 
     private static async Task<string> EnsureMagickAsync(IProgressReporter reporter, CancellationToken ct)

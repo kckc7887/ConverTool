@@ -22,7 +22,12 @@
     "host/output/dirLabel": "Output folder",
     "host/output/browse": "Browse...",
     "host/output/useInputDir": "Use original file location",
-    "host/output/templateLabel": "Naming template ({base}, {ext}, {index})"
+    "host/output/targetExtSuffixPrefix": "Target suffix:",
+    "host/output/namingTemplateTokenBaseText": "base",
+    "host/output/namingTemplateTokenIndexText": "index",
+    "host/output/namingTemplateTokenTimeDateText": "Date (yyyy-MM-dd)",
+    "host/output/namingTemplateTokenTimeHmsText": "Time (HH-mm-ss)",
+    "host/output/templateLabel": "Naming template"
     ,
     "host/process/progressLabel": "Progress"
     ,
@@ -40,7 +45,7 @@
     ,
     "host/process/parallelism": "Parallelism"
     ,
-    "host/output/templateHelp": "Template placeholders:\n- {base}: original filename without extension (e.g. \"input\")\n- {ext}: target extension (e.g. \"mp4\")\n- {index}: sequence number in batch (starts at 1)\n\nExample: {base}.{ext} → input.mp4"
+    "host/output/templateHelp": "Click chips below to add or remove tags; drag selected tags to reorder. Tags are joined with underscores. The target extension is shown on the right."
     ,
     "host/pluginManager/title": "Plugin manager",
     "host/pluginManager/refresh": "Refresh",

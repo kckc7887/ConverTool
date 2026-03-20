@@ -1,6 +1,6 @@
 # ConverTool
 
-轻量级桌面文件转换工具（Avalonia + 插件架构）。**v1.0** 起默认附带两个基础插件，安装后即可转换常见视频与图片格式；也可在「插件管理」中安装更多 `.zip` 插件。
+轻量级桌面文件转换工具（Avalonia + 插件架构）。**v1.0** 起默认附带两个基础插件（**当前主线版本 1.0.2**，与 `Host/Host.csproj` 一致；**自带插件**的 `manifest.json` 中 `version` 与 Host 同步，见 `docs/plugin-dev.md`），安装后即可转换常见视频与图片格式；也可在「插件管理」中安装更多 `.zip` 插件。
 
 - **下载安装（Windows）**：[GitHub Releases](https://github.com/kckc7887/ConverTool/releases) 提供 **安装程序 `setup.exe`** 以及 **免安装 zip（full / lite）**，无需自行编译。
 - **详细说明（含使用方法与技术文档）** → [docs/README.md](docs/README.md)
@@ -17,7 +17,7 @@
 ## 仓库结构提示
 
 - **应用本体**：`Host/`（发布后用户可见文件名为 `ConverTool.exe`）
-- **插件契约（NuGet）**：独立仓库 **`PluginAbstractions`**（包名 `ConverTool.PluginAbstractions`，与 Host 主版本对齐）
+- **插件契约**：**独立 Git 仓库**（与 **本 Host 仓库不同库**），以 NuGet 包 **`ConverTool.PluginAbstractions`** 提供给插件开发者；约定与边界见 **[docs/repositories.md](docs/repositories.md)**。若需在本机同时编译 Host 与 `plugins-src`，请按该文档 **§8** 克隆两个仓库（契约库目录名必须为 **`PluginAbstractions`**），或运行 **`installer/scripts/verify-dev-setup.ps1`** 做一键校验。
 - **插件源码与构建**：`plugins-src/`、`plugins-src/build-and-sync.ps1`
 - **Windows 安装包**：`installer/`（Inno Setup）
 

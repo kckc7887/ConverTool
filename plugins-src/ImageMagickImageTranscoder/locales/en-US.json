@@ -11,7 +11,21 @@
     "plugin/imagemagick.image.transcoder/target/tiff": "TIFF (print/archive)",
     "plugin/imagemagick.image.transcoder/target/webp": "WebP (web optimized)",
     "plugin/imagemagick.image.transcoder/target/avif": "AVIF (high compression)",
-    "plugin/imagemagick.image.transcoder/target/ico": "ICO (icon file)"
+    "plugin/imagemagick.image.transcoder/target/ico": "ICO (icon file)",
+
+    "plugin/imagemagick.image.transcoder/section/targetSize": "Target size compression",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/label": "Enable target size compression",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/help": "When enabled, size limiting (lossy quality) is applied to jpg/jpeg/webp/avif. PNG/BMP/GIF/TIFF are disabled to avoid \"lossless\" being selected by mistake.\n\nNote: any recommended values shown in brackets are suggestions only; using different values is allowed.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/label": "Unit (KB/MB)",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/help": "Min/Max values use this unit. When compression is enabled, the plugin will auto-convert to KB internally.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/KB": "KB",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/MB": "MB",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/label": "Retain compression settings",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/help": "When enabled, the plugin will reuse the previously found quality (for the same target format + size range) to speed up subsequent conversions. Default off.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/label": "Target min size",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/help": "Lower bound of the output file size (in the selected unit). Used together with Max.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/label": "Target max size",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/help": "Upper bound of the output file size (in the selected unit). Set > 0 to enable lossy compression for jpg/jpeg/webp/avif and try to keep the result inside the range."
   }
 }
 

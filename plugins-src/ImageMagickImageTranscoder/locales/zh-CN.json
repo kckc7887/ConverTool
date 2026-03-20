@@ -11,6 +11,20 @@
     "plugin/imagemagick.image.transcoder/target/tiff": "TIFF（印刷 / 存档）",
     "plugin/imagemagick.image.transcoder/target/webp": "WebP（网页省空间）",
     "plugin/imagemagick.image.transcoder/target/avif": "AVIF（高压缩率）",
-    "plugin/imagemagick.image.transcoder/target/ico": "ICO（图标文件）"
+    "plugin/imagemagick.image.transcoder/target/ico": "ICO（图标文件）",
+
+    "plugin/imagemagick.image.transcoder/section/targetSize": "按目标大小压缩",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/label": "启用按目标大小压缩",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/help": "开启后对 jpg/jpeg/webp/avif 使用有损的大小限制；PNG/BMP/GIF/TIFF 会被禁用，避免选择了“无损目标”。\n\n注：括号中的推荐值仅供参考，允许使用不同的数值。",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/label": "单位（KB/MB）",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/help": "最小/最大值使用此单位；开启压缩后插件会自动换算成 KB 内部处理。",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/KB": "KB",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/MB": "MB",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/label": "保留压缩设置",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/help": "开启后，当再次遇到相同的目标格式与目标大小区间时，会复用上一次找到的压缩质量以加速转换。默认关闭。",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/label": "最小目标大小",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/help": "输出文件大小的下限（按所选单位）。与 Max 一起使用。",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/label": "最大目标大小",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/help": "输出文件大小的上限（按所选单位）。设置为大于 0 会启用对 jpg/jpeg/webp/avif 的有损压缩，并尽量让结果落入区间。"
   }
 }

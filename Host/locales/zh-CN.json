@@ -22,7 +22,12 @@
     "host/output/dirLabel": "输出文件夹",
     "host/output/browse": "浏览…",
     "host/output/useInputDir": "使用原文件所在位置",
-    "host/output/templateLabel": "命名模板（{base}、{ext}、{index}）"
+    "host/output/targetExtSuffixPrefix": "目标格式后缀：",
+    "host/output/namingTemplateTokenBaseText": "文件名",
+    "host/output/namingTemplateTokenIndexText": "序号",
+    "host/output/namingTemplateTokenTimeDateText": "时间：年月日",
+    "host/output/namingTemplateTokenTimeHmsText": "时间：时分秒",
+    "host/output/templateLabel": "命名模板"
     ,
     "host/process/progressLabel": "进度"
     ,
@@ -40,7 +45,7 @@
     ,
     "host/process/parallelism": "并行度"
     ,
-    "host/output/templateHelp": "模板占位符：\n- {base}：原文件名（不含后缀，例如“input”）\n- {ext}：目标后缀（例如“mp4”）\n- {index}：批处理序号（从 1 开始）\n\n示例：{base}.{ext} → input.mp4"
+    "host/output/templateHelp": "点击下方标签加入或移除；拖动已选标签可调整顺序。多个标签之间用下划线连接。右侧为当前目标格式的扩展名。"
     ,
     "host/pluginManager/title": "插件管理",
     "host/pluginManager/refresh": "刷新",

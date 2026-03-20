@@ -4,12 +4,14 @@ using System.Collections.ObjectModel;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -112,6 +114,11 @@ public sealed class MainWindowViewModel : ObservableObject
         OutputDirLabel = _hostI18n.T("host/output/dirLabel");
         NamingTemplateLabel = _hostI18n.T("host/output/templateLabel");
         NamingTemplateHelp = _hostI18n.T("host/output/templateHelp");
+        NamingTemplateExtSuffixPrefix = _hostI18n.T("host/output/targetExtSuffixPrefix");
+        _namingTemplateTokenBaseText = _hostI18n.T("host/output/namingTemplateTokenBaseText");
+        _namingTemplateTokenIndexText = _hostI18n.T("host/output/namingTemplateTokenIndexText");
+        _namingTemplateTokenTimeDateText = _hostI18n.T("host/output/namingTemplateTokenTimeDateText");
+        _namingTemplateTokenTimeHmsText = _hostI18n.T("host/output/namingTemplateTokenTimeHmsText");
         UseInputDirLabel = _hostI18n.T("host/output/useInputDir");
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
@@ -126,7 +133,7 @@ public sealed class MainWindowViewModel : ObservableObject
         OutputDir = string.IsNullOrWhiteSpace(docs)
             ? Path.Combine(AppContext.BaseDirectory, "output")
             : Path.Combine(docs, "ConverToolOutput");
-        NamingTemplate = "{base}.{ext}";
+        NamingTemplate = "{base}";
 
         _loadingUserSettings = true;
         try
@@ -137,8 +144,8 @@ public sealed class MainWindowViewModel : ObservableObject
             }
 
             UseInputDirAsOutput = _userSettings.UseInputDirAsOutput ?? true;
-            NamingTemplate = string.IsNullOrWhiteSpace(_userSettings.NamingTemplate)
-                ? "{base}.{ext}"
+            NamingTemplate = _userSettings.NamingTemplate is null
+                ? "{base}"
                 : _userSettings.NamingTemplate.Trim();
             EnableParallelProcessing = _userSettings.EnableParallelProcessing;
             Parallelism = Math.Clamp(_userSettings.Parallelism, 1, 8);
@@ -150,6 +157,9 @@ public sealed class MainWindowViewModel : ObservableObject
             _loadingUserSettings = false;
         }
 
+        // Initialize naming template tokens from persisted template string.
+        InitNamingTemplateTokensFromTemplate(NamingTemplate);
+
         InputFiles.CollectionChanged += OnInputFilesCollectionChanged;
 
         StartCommand = new AsyncCommand(StartAsync);
@@ -160,6 +170,11 @@ public sealed class MainWindowViewModel : ObservableObject
         PauseCommand = new AsyncCommand(TogglePauseAsync);
         StopCommand = new AsyncCommand(StopAsync);
         AddPluginCommand = new AsyncCommand(AddPluginAsync);
+        AddNamingTemplateTokenCommand = new AsyncCommand<string>(v =>
+        {
+            ToggleNamingTemplateCandidate(v ?? "");
+            return Task.CompletedTask;
+        });
 
         _hostI18n.LocaleChanged += (_, _) => ReloadHostStrings();
         PropertyChanged += OnVmPersistablePropertyChanged;
@@ -201,6 +216,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public string OutputDirLabel { get; private set; } = "";
     public string NamingTemplateLabel { get; private set; } = "";
     public string NamingTemplateHelp { get; private set; } = "";
+    public string NamingTemplateExtSuffixPrefix { get; private set; } = "";
     public string UseInputDirLabel { get; private set; } = "";
     public string KeepTempLabel { get; private set; } = "";
     public string StartLabel { get; private set; } = "";
@@ -250,7 +266,73 @@ public sealed class MainWindowViewModel : ObservableObject
     public int Parallelism { get => _parallelism; set => SetProperty(ref _parallelism, Math.Clamp(value, 1, 8)); }
 
     private string _namingTemplate = "";
-    public string NamingTemplate { get => _namingTemplate; set => SetProperty(ref _namingTemplate, value); }
+
+    // ---- Naming template tokens (Reorderable Tokenized Tag Input) ----
+    private bool _syncingNamingTemplateTokens;
+
+    private string _namingTemplateTokenBaseText = "base";
+    public string NamingTemplateTokenBaseText => _namingTemplateTokenBaseText;
+
+    private string _namingTemplateTokenIndexText = "index";
+    public string NamingTemplateTokenIndexText => _namingTemplateTokenIndexText;
+
+    private string _namingTemplateTokenTimeDateText = "{timeYmd}";
+    private string _namingTemplateTokenTimeHmsText = "{timeHms}";
+
+    public ObservableCollection<NamingTemplateTokenVm> NamingTemplateSelectedTags { get; } = new();
+
+    private bool _hasNamingTemplateBaseToken;
+    public bool HasNamingTemplateBaseToken
+    {
+        get => _hasNamingTemplateBaseToken;
+        private set => SetProperty(ref _hasNamingTemplateBaseToken, value);
+    }
+
+    private bool _hasNamingTemplateIndexToken;
+    public bool HasNamingTemplateIndexToken
+    {
+        get => _hasNamingTemplateIndexToken;
+        private set => SetProperty(ref _hasNamingTemplateIndexToken, value);
+    }
+
+    private bool _hasNamingTemplateTimeYmdToken;
+    public bool HasNamingTemplateTimeYmdToken
+    {
+        get => _hasNamingTemplateTimeYmdToken;
+        private set => SetProperty(ref _hasNamingTemplateTimeYmdToken, value);
+    }
+
+    private bool _hasNamingTemplateTimeHmsToken;
+    public bool HasNamingTemplateTimeHmsToken
+    {
+        get => _hasNamingTemplateTimeHmsToken;
+        private set => SetProperty(ref _hasNamingTemplateTimeHmsToken, value);
+    }
+
+    public string NamingTemplateBaseCandidateText => NamingTemplateTokenBaseText;
+    public string NamingTemplateBaseCandidateValue => "{base}";
+    public string NamingTemplateIndexCandidateText => NamingTemplateTokenIndexText;
+    public string NamingTemplateIndexCandidateValue => "{index}";
+
+    public string NamingTemplateTimeDateCandidateText => _namingTemplateTokenTimeDateText;
+    public string NamingTemplateTimeDateCandidateValue => "{timeYmd}";
+
+    public string NamingTemplateTimeHmsCandidateText => _namingTemplateTokenTimeHmsText;
+    public string NamingTemplateTimeHmsCandidateValue => "{timeHms}";
+
+    public ObservableCollection<string> NamingTemplateActionCandidates { get; } = new()
+    {
+        "{base}",
+        "{index}",
+        "{timeYmd}",
+        "{timeHms}",
+    };
+
+    public string NamingTemplate
+    {
+        get => _namingTemplate;
+        set => SetProperty(ref _namingTemplate, NormalizeNamingTemplate(value));
+    }
 
     private bool _keepTemp;
     public bool KeepTemp { get => _keepTemp; set => SetProperty(ref _keepTemp, value); }
@@ -259,9 +341,210 @@ public sealed class MainWindowViewModel : ObservableObject
     public ObservableCollection<TargetFormatVm> TargetFormats { get; } = new();
 
     private TargetFormatVm? _selectedTargetFormat;
-    public TargetFormatVm? SelectedTargetFormat { get => _selectedTargetFormat; set => SetProperty(ref _selectedTargetFormat, value); }
+    public TargetFormatVm? SelectedTargetFormat
+    {
+        get => _selectedTargetFormat;
+        set
+        {
+            if (SetProperty(ref _selectedTargetFormat, value))
+            {
+                RaisePropertyChanged(nameof(NamingTemplateExtSuffix));
+                RaisePropertyChanged(nameof(HasNamingTemplateExtSuffix));
+            }
+        }
+    }
+
+    // UI: show the final fixed suffix next to the naming template input box.
+    public string NamingTemplateExtSuffix
+    {
+        get
+        {
+            var id = SelectedTargetFormat?.Id;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return "";
+            }
+
+            var suffix = "." + id;
+            var cur = (_namingTemplate ?? "").Trim().TrimEnd('.');
+            if (!string.IsNullOrWhiteSpace(cur) && cur.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                // User already typed the suffix into the template; hide the fixed label to avoid visual duplication.
+                return "";
+            }
+
+            return suffix;
+        }
+    }
+
+    public bool HasNamingTemplateExtSuffix => !string.IsNullOrWhiteSpace(NamingTemplateExtSuffix);
+
+    private static string NormalizeNamingTemplate(string? template)
+    {
+        var t = (template ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(t))
+        {
+            return "";
+        }
+
+        // Keep backward compatibility: if user previously typed `{base}.{ext}`,
+        // normalize to `{base}` because the extension is now shown/added on the right.
+        t = Regex.Replace(t, @"\.\{ext\}", "", RegexOptions.IgnoreCase);
+        t = Regex.Replace(t, @"\{ext\}", "", RegexOptions.IgnoreCase);
+
+        t = t.Trim();
+        return string.IsNullOrWhiteSpace(t) ? "" : t;
+    }
+
+    private void InitNamingTemplateTokensFromTemplate(string template)
+    {
+        _syncingNamingTemplateTokens = true;
+        try
+        {
+            NamingTemplateSelectedTags.Clear();
+
+            var t = (template ?? "").Trim();
+            // Allow empty list: if user cleared all tokens, NamingTemplate can be "".
+
+            var parts = t.Split('_', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                NamingTemplateSelectedTags.Add(new NamingTemplateTokenVm(
+                    part,
+                    NamingTemplateTokenBaseText,
+                    NamingTemplateTokenIndexText,
+                    _namingTemplateTokenTimeDateText,
+                    _namingTemplateTokenTimeHmsText,
+                    RemoveNamingTemplateToken
+                ));
+            }
+        }
+        finally
+        {
+            _syncingNamingTemplateTokens = false;
+        }
+
+        RecomputeNamingTemplateFromSelectedTags();
+    }
+
+    private void RecomputeNamingTemplateFromSelectedTags()
+    {
+        if (_syncingNamingTemplateTokens)
+        {
+            return;
+        }
+
+        var composed = string.Join("_", NamingTemplateSelectedTags.Select(t => t.Value).Where(v => v is not null));
+
+        // Set the persisted template string for the host output engine.
+        NamingTemplate = composed;
+
+        UpdateActionCandidateStates();
+    }
+
+    private void UpdateActionCandidateStates()
+    {
+        var hasBase = NamingTemplateSelectedTags.Any(t =>
+            string.Equals(t.Value, "{base}", StringComparison.OrdinalIgnoreCase));
+        var hasIndex = NamingTemplateSelectedTags.Any(t =>
+            string.Equals(t.Value, "{index}", StringComparison.OrdinalIgnoreCase));
+
+        HasNamingTemplateBaseToken = hasBase;
+        HasNamingTemplateIndexToken = hasIndex;
+        HasNamingTemplateTimeYmdToken = NamingTemplateSelectedTags.Any(t =>
+            string.Equals(t.Value, "{timeYmd}", StringComparison.OrdinalIgnoreCase));
+        HasNamingTemplateTimeHmsToken = NamingTemplateSelectedTags.Any(t =>
+            string.Equals(t.Value, "{timeHms}", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ToggleNamingTemplateCandidate(string? value)
+    {
+        var v = (value ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(v))
+        {
+            return;
+        }
+
+        var existing = NamingTemplateSelectedTags.FirstOrDefault(t =>
+            string.Equals(t.Value, v, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            RemoveNamingTemplateToken(existing);
+        }
+        else
+        {
+            AddNamingTemplateToken(v);
+        }
+    }
+
+    private void RemoveNamingTemplateToken(NamingTemplateTokenVm token)
+    {
+        if (token is null)
+        {
+            return;
+        }
+
+        NamingTemplateSelectedTags.Remove(token);
+        RecomputeNamingTemplateFromSelectedTags();
+    }
+
+    public void AddNamingTemplateToken(string value)
+    {
+        var v = (value ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(v))
+        {
+            return;
+        }
+
+        NamingTemplateSelectedTags.Add(new NamingTemplateTokenVm(
+            v,
+            NamingTemplateTokenBaseText,
+            NamingTemplateTokenIndexText,
+            _namingTemplateTokenTimeDateText,
+            _namingTemplateTokenTimeHmsText,
+            RemoveNamingTemplateToken
+        ));
+        RecomputeNamingTemplateFromSelectedTags();
+    }
+
+    public void MoveNamingTemplateToken(NamingTemplateTokenVm from, NamingTemplateTokenVm to)
+    {
+        if (from is null || to is null || ReferenceEquals(from, to))
+        {
+            return;
+        }
+
+        var fromIndex = NamingTemplateSelectedTags.IndexOf(from);
+        var toIndex = NamingTemplateSelectedTags.IndexOf(to);
+        if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex)
+        {
+            return;
+        }
+
+        NamingTemplateSelectedTags.Move(fromIndex, toIndex);
+        RecomputeNamingTemplateFromSelectedTags();
+    }
 
     public ObservableCollection<ConfigFieldVm> ConfigFields { get; } = new();
+
+    // ---- UI rules (visibleIf / dependencies) ----
+    private readonly Dictionary<string, VisibleIfModel?> _visibleIfByFieldKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly List<FieldBoolRelationModel> _fieldBoolRelations = new();
+
+    private IReadOnlyList<TargetFormatModel> _allTargetFormatModels = Array.Empty<TargetFormatModel>();
+
+    private readonly Dictionary<string, string> _baseLabelByFieldKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, string?> _baseHelpByFieldKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private bool _isReevaluatingUiRules;
+    private bool _isConvertingTargetSizeUnit;
+    private string? _lastTargetSizeUnitId;
 
     // ---- process/output ----
     private string _processLog = "";
@@ -287,6 +570,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncCommand PauseCommand { get; }
     public AsyncCommand StopCommand { get; }
     public AsyncCommand AddPluginCommand { get; }
+    public AsyncCommand<string> AddNamingTemplateTokenCommand { get; }
 
     // Host will set this from code-behind (TopLevel required for picker).
     public TopLevel? TopLevel { get; set; }
@@ -350,6 +634,10 @@ public sealed class MainWindowViewModel : ObservableObject
         NamingTemplateLabel = _hostI18n.T("host/output/templateLabel");
         NamingTemplateHelp = _hostI18n.T("host/output/templateHelp");
         UseInputDirLabel = _hostI18n.T("host/output/useInputDir");
+        _namingTemplateTokenBaseText = _hostI18n.T("host/output/namingTemplateTokenBaseText");
+        _namingTemplateTokenIndexText = _hostI18n.T("host/output/namingTemplateTokenIndexText");
+        _namingTemplateTokenTimeDateText = _hostI18n.T("host/output/namingTemplateTokenTimeDateText");
+        _namingTemplateTokenTimeHmsText = _hostI18n.T("host/output/namingTemplateTokenTimeHmsText");
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
         PauseLabel = _hostI18n.T("host/process/pause");
@@ -378,6 +666,9 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(OutputDirLabel));
         RaisePropertyChanged(nameof(NamingTemplateLabel));
         RaisePropertyChanged(nameof(NamingTemplateHelp));
+        RaisePropertyChanged(nameof(NamingTemplateBaseCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateIndexCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateExtSuffixPrefix));
         RaisePropertyChanged(nameof(UseInputDirLabel));
         RaisePropertyChanged(nameof(KeepTempLabel));
         RaisePropertyChanged(nameof(StartLabel));
@@ -390,6 +681,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
         // plugin strings depend on locale too
         ReloadPluginContext();
+
+        // Rebuild tokens so that token display text is updated to the current locale.
+        InitNamingTemplateTokensFromTemplate(NamingTemplate);
     }
 
     private void ReloadPluginContext()
@@ -402,6 +696,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
         TargetFormats.Clear();
         ConfigFields.Clear();
+        _visibleIfByFieldKey.Clear();
+        _fieldBoolRelations.Clear();
+        _baseLabelByFieldKey.Clear();
+        _baseHelpByFieldKey.Clear();
 
         if (!HasActivePlugin)
         {
@@ -409,9 +707,11 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        foreach (var tf in plugin!.Manifest.SupportedTargetFormats ?? Array.Empty<TargetFormatModel>())
+        _allTargetFormatModels = plugin!.Manifest.SupportedTargetFormats ?? Array.Empty<TargetFormatModel>();
+        TargetFormats.Clear();
+        foreach (var tf in _allTargetFormatModels)
         {
-            TargetFormats.Add(new TargetFormatVm(tf.Id, _pluginI18n.T(plugin, tf.DisplayNameKey, _hostI18n.Locale)));
+            TargetFormats.Add(new TargetFormatVm(tf.Id, _pluginI18n.T(plugin!, tf.DisplayNameKey, _hostI18n.Locale)));
         }
         SelectedTargetFormat = TargetFormats.FirstOrDefault();
 
@@ -433,7 +733,11 @@ public sealed class MainWindowViewModel : ObservableObject
 
                     ConfigFieldVm vm = type switch
                     {
-                        "Checkbox" => new CheckboxFieldVm(field.Key, label, help, defaultValue: false),
+                        "Checkbox" => new CheckboxFieldVm(
+                            field.Key,
+                            label,
+                            help,
+                            defaultValue: TryGetBoolDefault(field.DefaultValue, false)),
                         "Select" => new SelectFieldVm(
                             field.Key,
                             label,
@@ -465,9 +769,21 @@ public sealed class MainWindowViewModel : ObservableObject
                         _ => new TextFieldVm(field.Key, label, help, TryGetStringDefault(field.DefaultValue))
                     };
 
+                    _baseLabelByFieldKey[field.Key] = vm.Label;
+                    _baseHelpByFieldKey[field.Key] = vm.Help;
+                    if (field.VisibleIf is not null)
+                    {
+                        _visibleIfByFieldKey[field.Key] = field.VisibleIf;
+                    }
+
                     ConfigFields.Add(vm);
                 }
             }
+        }
+
+        if (schema?.FieldBoolRelations is { } rels)
+        {
+            _fieldBoolRelations.AddRange(rels);
         }
 
         _loadingUserSettings = true;
@@ -479,6 +795,10 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             _loadingUserSettings = false;
         }
+
+        // Evaluate visibleIf right after loading persisted values.
+        // Relations are applied only on user-driven driving-checkbox change.
+        ReevaluateUiRules(changedFieldKey: null);
 
         AttachConfigFieldHandlers();
     }
@@ -563,6 +883,8 @@ public sealed class MainWindowViewModel : ObservableObject
                     _ => v.ToString() ?? ""
                 };
             }
+
+            ApplyFieldPersistOverridesToSavedPluginFields(plug);
         }
 
         return _userSettings;
@@ -599,6 +921,89 @@ public sealed class MainWindowViewModel : ObservableObject
 
             ApplyFieldString(field, raw);
         }
+
+        ApplyFieldPersistOverridesAfterRestore();
+    }
+
+    /// <summary>
+    /// When manifest <c>configSchema.fieldPersistOverrides</c> rules match current UI, overwrite keys in the
+    /// snapshot written to disk so the next launch restores folded defaults, without changing in-session VMs here.
+    /// </summary>
+    private void ApplyFieldPersistOverridesToSavedPluginFields(PluginUserSettings plug)
+    {
+        var schema = _activePlugin?.Manifest?.ConfigSchema;
+        if (schema?.FieldPersistOverrides is not { Length: > 0 } rules)
+        {
+            return;
+        }
+
+        foreach (var rule in rules)
+        {
+            if (rule.When is null || rule.Fields is null || rule.Fields.Count == 0)
+            {
+                continue;
+            }
+
+            if (!TryGetCheckboxValue(rule.When.FieldKey, out var cur) || cur != rule.When.Expected)
+            {
+                continue;
+            }
+
+            foreach (var kv in rule.Fields)
+            {
+                plug.Fields[kv.Key] = JsonElementToPersistString(kv.Value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// After loading user-settings into VMs, apply the same rules so legacy files and coerced snapshots
+    /// match the intended next-launch UI (e.g. enable off when retain is off).
+    /// </summary>
+    private void ApplyFieldPersistOverridesAfterRestore()
+    {
+        var schema = _activePlugin?.Manifest?.ConfigSchema;
+        if (schema?.FieldPersistOverrides is not { Length: > 0 } rules)
+        {
+            return;
+        }
+
+        foreach (var rule in rules)
+        {
+            if (rule.When is null || rule.Fields is null || rule.Fields.Count == 0)
+            {
+                continue;
+            }
+
+            if (!TryGetCheckboxValue(rule.When.FieldKey, out var cur) || cur != rule.When.Expected)
+            {
+                continue;
+            }
+
+            foreach (var kv in rule.Fields)
+            {
+                var field = ConfigFields.FirstOrDefault(f =>
+                    string.Equals(f.Key, kv.Key, StringComparison.OrdinalIgnoreCase));
+                if (field is null)
+                {
+                    continue;
+                }
+
+                ApplyFieldString(field, JsonElementToPersistString(kv.Value));
+            }
+        }
+    }
+
+    private static string JsonElementToPersistString(JsonElement el)
+    {
+        return el.ValueKind switch
+        {
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.String => el.GetString() ?? "",
+            JsonValueKind.Number => el.ToString(),
+            _ => el.ToString()
+        };
     }
 
     private static void ApplyFieldString(ConfigFieldVm field, string raw)
@@ -657,6 +1062,7 @@ public sealed class MainWindowViewModel : ObservableObject
         DetachConfigFieldHandlers();
         foreach (var f in ConfigFields)
         {
+            var fieldKey = f.Key;
             PropertyChangedEventHandler h = (_, _) =>
             {
                 if (_loadingUserSettings)
@@ -664,10 +1070,247 @@ public sealed class MainWindowViewModel : ObservableObject
                     return;
                 }
 
+                if (_isReevaluatingUiRules)
+                {
+                    return;
+                }
+
+                ReevaluateUiRules(fieldKey);
                 ScheduleSaveUserSettings();
             };
             f.PropertyChanged += h;
             _configFieldHandlers.Add((f, h));
+        }
+    }
+
+    private bool TryGetCheckboxValue(string key, out bool value)
+    {
+        var field = ConfigFields.FirstOrDefault(f =>
+            string.Equals(f.Key, key, StringComparison.OrdinalIgnoreCase));
+
+        if (field is CheckboxFieldVm c)
+        {
+            value = c.IsChecked;
+            return true;
+        }
+
+        value = false;
+        return false;
+    }
+
+    private string GetTargetSizeUnitId()
+    {
+        const string targetSizeUnitKey = "targetSizeUnit";
+        var field = ConfigFields.FirstOrDefault(f => string.Equals(f.Key, targetSizeUnitKey, StringComparison.OrdinalIgnoreCase));
+        if (field is SelectFieldVm s && s.Selected is { } opt)
+        {
+            return opt.Id;
+        }
+
+        return "KB";
+    }
+
+    private void ApplyTargetSizeUnitConversionIfNeeded()
+    {
+        const string targetMinKey = "targetSizeMinKb";
+        const string targetMaxKey = "targetSizeMaxKb";
+
+        var newUnitId = GetTargetSizeUnitId();
+        if (string.Equals(_lastTargetSizeUnitId, newUnitId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var minField = ConfigFields.OfType<NumberFieldVm>().FirstOrDefault(f =>
+            string.Equals(f.Key, targetMinKey, StringComparison.OrdinalIgnoreCase));
+        var maxField = ConfigFields.OfType<NumberFieldVm>().FirstOrDefault(f =>
+            string.Equals(f.Key, targetMaxKey, StringComparison.OrdinalIgnoreCase));
+
+        if (minField is null || maxField is null)
+        {
+            _lastTargetSizeUnitId = newUnitId;
+            return;
+        }
+
+        if (!_isConvertingTargetSizeUnit)
+        {
+            _isConvertingTargetSizeUnit = true;
+            try
+            {
+                if (string.Equals(_lastTargetSizeUnitId, "KB", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(newUnitId, "MB", StringComparison.OrdinalIgnoreCase))
+                {
+                    minField.Value /= 1024m;
+                    maxField.Value /= 1024m;
+                }
+                else if (string.Equals(_lastTargetSizeUnitId, "MB", StringComparison.OrdinalIgnoreCase) &&
+                         string.Equals(newUnitId, "KB", StringComparison.OrdinalIgnoreCase))
+                {
+                    minField.Value *= 1024m;
+                    maxField.Value *= 1024m;
+                }
+                else
+                {
+                    // Unknown transition; just update baseline without conversion.
+                }
+            }
+            finally
+            {
+                _isConvertingTargetSizeUnit = false;
+            }
+        }
+
+        _lastTargetSizeUnitId = newUnitId;
+    }
+
+    private void UpdateTargetSizeLabels()
+    {
+        var unitId = GetTargetSizeUnitId();
+        var zh = _hostI18n.Locale.StartsWith("zh", StringComparison.OrdinalIgnoreCase);
+
+        const string targetMinKey = "targetSizeMinKb";
+        const string targetMaxKey = "targetSizeMaxKb";
+
+        if (_baseLabelByFieldKey.TryGetValue(targetMinKey, out var baseMin))
+        {
+            var suffix = zh ? $"（{unitId}）" : $" ({unitId})";
+            var field = ConfigFields.FirstOrDefault(f => string.Equals(f.Key, targetMinKey, StringComparison.OrdinalIgnoreCase));
+            if (field is not null)
+            {
+                field.Label = baseMin + suffix;
+            }
+        }
+
+        if (_baseLabelByFieldKey.TryGetValue(targetMaxKey, out var baseMax))
+        {
+            var suffix = zh ? $"（{unitId}）" : $" ({unitId})";
+            var field = ConfigFields.FirstOrDefault(f => string.Equals(f.Key, targetMaxKey, StringComparison.OrdinalIgnoreCase));
+            if (field is not null)
+            {
+                field.Label = baseMax + suffix;
+            }
+        }
+    }
+
+    private void ReevaluateUiRules(string? changedFieldKey)
+    {
+        if (_isReevaluatingUiRules)
+        {
+            return;
+        }
+
+        _isReevaluatingUiRules = true;
+        try
+        {
+            // 1) apply dependency relations (checkbox -> checkbox), non-save only
+            foreach (var rel in _fieldBoolRelations)
+            {
+                if (rel.If is null || rel.Then is null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(rel.ApplyWhen, "save", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(rel.If.FieldKey, changedFieldKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (TryGetCheckboxValue(rel.If.FieldKey, out var curValue) &&
+                    curValue == rel.If.Expected)
+                {
+                    var targetField = ConfigFields.FirstOrDefault(f =>
+                        string.Equals(f.Key, rel.Then.TargetKey, StringComparison.OrdinalIgnoreCase));
+                    if (targetField is CheckboxFieldVm cb &&
+                        cb.IsChecked != rel.Then.Value)
+                    {
+                        cb.IsChecked = rel.Then.Value;
+                    }
+                }
+            }
+
+            // 2) show/hide fields via visibleIf
+            foreach (var field in ConfigFields)
+            {
+                if (_visibleIfByFieldKey.TryGetValue(field.Key, out var vIf) && vIf is not null)
+                {
+                    var show = false;
+                    if (TryGetCheckboxValue(vIf.FieldKey, out var controllingValue))
+                    {
+                        show = controllingValue == vIf.Expected;
+                    }
+                    field.IsVisible = show;
+                }
+                else
+                {
+                    field.IsVisible = true;
+                }
+            }
+
+            // 3) target-size unit conversion + dynamic labels
+            ApplyTargetSizeUnitConversionIfNeeded();
+            UpdateTargetSizeLabels();
+
+            // 4) filter target formats via visibleIf
+            RefreshTargetFormatsByVisibility();
+        }
+        finally
+        {
+            _isReevaluatingUiRules = false;
+        }
+    }
+
+    private void RefreshTargetFormatsByVisibility()
+    {
+        var candidates = new List<TargetFormatVm>();
+
+        foreach (var tf in _allTargetFormatModels)
+        {
+            var visible = true;
+                if (tf.VisibleIf is not null)
+            {
+                if (TryGetCheckboxValue(tf.VisibleIf.FieldKey, out var controllingValue))
+                {
+                        visible = controllingValue == tf.VisibleIf.Expected;
+                }
+                else
+                {
+                    visible = false;
+                }
+            }
+
+            if (visible)
+            {
+                var entry = _activePlugin;
+                if (entry is null)
+                {
+                    continue;
+                }
+
+                candidates.Add(new TargetFormatVm(tf.Id, _pluginI18n.T(entry, tf.DisplayNameKey, _hostI18n.Locale)));
+            }
+        }
+
+        TargetFormats.Clear();
+        foreach (var c in candidates)
+        {
+            TargetFormats.Add(c);
+        }
+
+        if (!TargetFormats.Any())
+        {
+            SelectedTargetFormat = null;
+            return;
+        }
+
+        if (SelectedTargetFormat is null ||
+            !TargetFormats.Any(t => string.Equals(t.Id, SelectedTargetFormat.Id, StringComparison.OrdinalIgnoreCase)))
+        {
+            SelectedTargetFormat = TargetFormats.First();
         }
     }
 
@@ -794,6 +1437,7 @@ public sealed class MainWindowViewModel : ObservableObject
                                  ?? "txt";
 
             var selectedConfig = ConfigFields.ToDictionary(f => f.Key, f => f.GetValue(), StringComparer.OrdinalIgnoreCase);
+            var namingNow = DateTime.Now;
 
             string? finalPath = null;
             string? fail = null;
@@ -842,7 +1486,9 @@ public sealed class MainWindowViewModel : ObservableObject
                         {
                             ["base"] = Path.GetFileNameWithoutExtension(input),
                             ["index"] = index,
-                            ["ext"] = targetFormatId
+                            ["ext"] = targetFormatId,
+                            ["timeYmd"] = namingNow.ToString("yyyy-MM-dd"),
+                            ["timeHms"] = namingNow.ToString("HH-mm-ss")
                         }
                     ),
                     reporter,
@@ -961,6 +1607,7 @@ public sealed class MainWindowViewModel : ObservableObject
                                          ?? "txt";
 
                     var selectedConfig = ConfigFields.ToDictionary(f => f.Key, f => f.GetValue(), StringComparer.OrdinalIgnoreCase);
+                    var namingNow = DateTime.Now;
 
                     string? finalPath = null;
                     string? fail = null;
@@ -1004,7 +1651,9 @@ public sealed class MainWindowViewModel : ObservableObject
                                 {
                                     ["base"] = Path.GetFileNameWithoutExtension(input),
                                     ["index"] = index,
-                                    ["ext"] = targetFormatId
+                                    ["ext"] = targetFormatId,
+                                    ["timeYmd"] = namingNow.ToString("yyyy-MM-dd"),
+                                    ["timeHms"] = namingNow.ToString("HH-mm-ss")
                                 }
                             ),
                             reporter,
@@ -1314,21 +1963,26 @@ public sealed class MainWindowViewModel : ObservableObject
         }
         Directory.CreateDirectory(outputDir);
 
-        var template = (NamingTemplate ?? "{base}.{ext}").Trim();
+        var template = (NamingTemplate ?? "{base}").Trim();
         if (string.IsNullOrWhiteSpace(template))
         {
-            template = "{base}.{ext}";
+            template = "{base}";
         }
 
         var baseName = Path.GetFileNameWithoutExtension(inputPath);
+        var now = DateTime.Now;
         var fileName = template
             .Replace("{base}", baseName, StringComparison.OrdinalIgnoreCase)
             .Replace("{ext}", targetExt, StringComparison.OrdinalIgnoreCase)
-            .Replace("{index}", index.ToString(), StringComparison.OrdinalIgnoreCase);
+            .Replace("{index}", index.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("{timeYmd}", now.ToString("yyyy-MM-dd"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{timeHms}", now.ToString("HH-mm-ss"), StringComparison.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(Path.GetExtension(fileName)))
+        fileName = fileName.TrimEnd('.');
+        var expectedSuffix = "." + targetExt;
+        if (!fileName.EndsWith(expectedSuffix, StringComparison.OrdinalIgnoreCase))
         {
-            fileName = $"{fileName}.{targetExt}";
+            fileName = $"{fileName}{expectedSuffix}";
         }
 
         foreach (var c in Path.GetInvalidFileNameChars())
@@ -1435,6 +2089,30 @@ public sealed class MainWindowViewModel : ObservableObject
             JsonValueKind.False => "false",
             _ => el.Value.ToString()
         };
+    }
+
+    private static bool TryGetBoolDefault(JsonElement? el, bool fallback)
+    {
+        if (el is null)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return el.Value.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.String => bool.TryParse(el.Value.GetString(), out var b) ? b : fallback,
+                JsonValueKind.Number => el.Value.GetInt32() != 0,
+                _ => fallback
+            };
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     private static double TryGetDoubleDefault(JsonElement? el, double fallback)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -58,6 +59,9 @@ public sealed class TargetFormatModel
 
     [JsonPropertyName("descriptionKey")]
     public string? DescriptionKey { get; set; }
+
+    [JsonPropertyName("visibleIf")]
+    public VisibleIfModel? VisibleIf { get; set; }
 }
 
 public sealed class I18nModel
@@ -70,6 +74,30 @@ public sealed class ConfigSchemaModel
 {
     [JsonPropertyName("sections")]
     public ConfigSectionModel[] Sections { get; set; } = [];
+
+    [JsonPropertyName("fieldBoolRelations")]
+    public FieldBoolRelationModel[] FieldBoolRelations { get; set; } = [];
+
+    /// <summary>
+    /// When a rule's <see cref="FieldPersistOverrideModel.When"/> matches current UI, Host applies
+    /// <see cref="FieldPersistOverrideModel.Fields"/> to the serialized user-settings snapshot (and after restore),
+    /// without changing in-session UI during save — see Host implementation.
+    /// </summary>
+    [JsonPropertyName("fieldPersistOverrides")]
+    public FieldPersistOverrideModel[] FieldPersistOverrides { get; set; } = [];
+}
+
+/// <summary>
+/// Mirrors <c>PluginAbstractions.FieldPersistOverrideRule</c> for JSON manifests.
+/// </summary>
+public sealed class FieldPersistOverrideModel
+{
+    [JsonPropertyName("when")]
+    public VisibleIfModel When { get; set; } = new();
+
+    /// <summary>Field keys and JSON values as stored in user-settings (e.g. checkbox booleans).</summary>
+    [JsonPropertyName("fields")]
+    public Dictionary<string, JsonElement>? Fields { get; set; }
 }
 
 public sealed class ConfigSectionModel
@@ -115,6 +143,40 @@ public sealed class ConfigFieldModel
 
     [JsonPropertyName("path")]
     public PathFieldModel? Path { get; set; }
+
+    [JsonPropertyName("visibleIf")]
+    public VisibleIfModel? VisibleIf { get; set; }
+}
+
+public sealed class VisibleIfModel
+{
+    [JsonPropertyName("fieldKey")]
+    public string FieldKey { get; set; } = "";
+
+    [JsonPropertyName("equals")]
+    public bool Expected { get; set; }
+}
+
+public sealed class FieldBoolRelationModel
+{
+    [JsonPropertyName("if")]
+    public VisibleIfModel If { get; set; } = new();
+
+    [JsonPropertyName("then")]
+    public FieldBoolThenModel Then { get; set; } = new();
+
+    // "save" in our manifests; we apply immediately in UI anyway.
+    [JsonPropertyName("applyWhen")]
+    public string? ApplyWhen { get; set; }
+}
+
+public sealed class FieldBoolThenModel
+{
+    [JsonPropertyName("targetKey")]
+    public string TargetKey { get; set; } = "";
+
+    [JsonPropertyName("value")]
+    public bool Value { get; set; }
 }
 
 public sealed class ConfigOptionModel

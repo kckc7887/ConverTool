@@ -121,7 +121,7 @@
                                 <ItemsControl ItemsSource="{Binding ConfigFields}" IsVisible="{Binding HasActivePlugin}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ConfigFieldVm">
-                                            <StackPanel Spacing="8" Margin="0,10,0,0">
+                                            <StackPanel Spacing="8" Margin="0,10,0,0" IsVisible="{Binding IsVisible}">
                                                 <TextBlock Classes="section-title" Text="{Binding Label}" />
                                                 <ContentControl Content="{Binding}">
                                                     <ContentControl.DataTemplates>
@@ -174,7 +174,7 @@
                                                             </Grid>
                                                         </DataTemplate>
                                                         <DataTemplate x:DataType="vm:CheckboxFieldVm">
-                                                            <CheckBox IsChecked="{Binding IsChecked}" />
+                                                            <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}" />
                                                         </DataTemplate>
                                                         <DataTemplate x:DataType="vm:SelectFieldVm">
                                                             <ComboBox MinWidth="0" HorizontalAlignment="Stretch"
@@ -222,7 +222,82 @@
                                                 Command="{Binding BrowseOutputDirCommand}" />
                                     </Grid>
                                     <TextBlock VerticalAlignment="Center" Text="{Binding NamingTemplateLabel}" />
-                                    <TextBox Text="{Binding NamingTemplate, Mode=TwoWay}" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <StackPanel Grid.Column="0" Spacing="8">
+                                            <!-- Selected tokens -->
+                                            <Border CornerRadius="10"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                                                    Padding="10,8">
+                                                <ItemsControl ItemsSource="{Binding NamingTemplateSelectedTags}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:NamingTemplateTokenVm">
+                                                            <Border Classes="tag-chip"
+                                                                    input:DragDrop.AllowDrop="True"
+                                                                    input:DragDrop.DragOver="OnNamingTemplateTagDragOver"
+                                                                    input:DragDrop.Drop="OnNamingTemplateTagDrop"
+                                                                    PointerPressed="OnNamingTemplateTagPointerPressed">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                            VerticalAlignment="Center"
+                                                                            Margin="0">
+                                                                    <TextBlock Text="{Binding DisplayText}"
+                                                                               Opacity="0.95"
+                                                                               VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis" />
+                                                                </StackPanel>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Border>
+
+                                            <!-- Action chips -->
+                                            <WrapPanel>
+                                                <ToggleButton Content="{Binding NamingTemplateBaseCandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateBaseToken, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateBaseCandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateIndexCandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateIndexToken, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateIndexCandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateTimeDateCandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateTimeYmdToken, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateTimeDateCandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateTimeHmsCandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateTimeHmsToken, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateTimeHmsCandidateValue}" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                    VerticalAlignment="Center"
+                                                    IsVisible="{Binding HasNamingTemplateExtSuffix}">
+                                            <TextBlock Opacity="0.7" Text="{Binding NamingTemplateExtSuffixPrefix}" />
+                                            <TextBlock FontFamily="{DynamicResource MonospaceFontFamily}"
+                                                       Opacity="0.85"
+                                                       Text="{Binding NamingTemplateExtSuffix}" />
+                                        </StackPanel>
+                                    </Grid>
                                     <TextBlock Classes="help-text" TextWrapping="Wrap"
                                                Text="{Binding NamingTemplateHelp}" />
                                     <CheckBox Content="{Binding KeepTempLabel}" IsChecked="{Binding KeepTemp}"

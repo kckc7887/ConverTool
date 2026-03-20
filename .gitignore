@@ -1,25 +1,42 @@
+# Build outputs
 **/bin/
 **/obj/
+[Bb]uild/
+[Ll]og/
+[Ll]ogs/
+
+# IDE / tooling
 .vs/
 .vscode/
 .idea/
-
 *.user
 *.suo
 *.cache
 *.log
 
-# Optional: Rider/VS metadata
-.DS_Store
+# ReSharper / Rider
+_ReSharper*/
+*.DotSettings.user
+*.sln.iml
 
-# Local checkout of the contract repo (separate git repo)
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 契约库 PluginAbstractions：独立 Git 仓库（与 Host 不同库）。插件作者用 NuGet；本仓库内联调为 ProjectReference 指向本地 clone（勿提交）。
+# 本地若 clone / submodule 契约仓库到该路径，勿提交到 Host 仓库。详见 docs/repositories.md。
 PluginAbstractions/
 
-# Build / publish output (release zips, etc.)
+# Build / publish output (release zips, installer outputs, publish folders)
 artifacts/
 
 # Local scratch / tooling (never commit)
 .tmp/
+
+# 可选：仓库根目录私有备忘（不提交；公开流程见 installer/、docs/）
+local/
 
 # Sample plugin build outputs
 plugins-src/**/bin/
@@ -27,7 +44,7 @@ plugins-src/**/obj/
 plugins-src/**/out/
 plugins-src/**/dist/
 
-# Unified plugin runtime/build outputs
+# Unified plugin runtime/build outputs (tracked copies live under Host/plugins/)
 plugins/
 plugins-dist/
 !Host/plugins/
@@ -39,3 +56,12 @@ old-versions/
 # Local test installs / smoke output (large binaries; not for git)
 Tests/
 
+# Unit/integration test & coverage (dotnet test / coverlet)
+TestResults/
+[Tt]est[Rr]esult*/
+coverage/
+*.coverage
+*.coveragexml
+
+# ClickOnce / publish profiles (machine-specific)
+**/PublishProfiles/*.pubxml.user

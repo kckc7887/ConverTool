@@ -1,6 +1,6 @@
 {
   "pluginId": "imagemagick.image.transcoder",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "author": "Chnynnya",
   "assembly": "ImageMagickImageTranscoder.dll",
   "type": "ImageMagickImageTranscoder.ImageMagickImageTranscoderPlugin",
@@ -11,18 +11,95 @@
     "png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "heic"
   ],
   "supportedTargetFormats": [
-    { "id": "png", "displayNameKey": "plugin/imagemagick.image.transcoder/target/png" },
+    {
+      "id": "png",
+      "displayNameKey": "plugin/imagemagick.image.transcoder/target/png",
+      "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": false }
+    },
     { "id": "jpg", "displayNameKey": "plugin/imagemagick.image.transcoder/target/jpg" },
     { "id": "jpeg", "displayNameKey": "plugin/imagemagick.image.transcoder/target/jpeg" },
-    { "id": "bmp", "displayNameKey": "plugin/imagemagick.image.transcoder/target/bmp" },
-    { "id": "gif", "displayNameKey": "plugin/imagemagick.image.transcoder/target/gif" },
-    { "id": "tiff", "displayNameKey": "plugin/imagemagick.image.transcoder/target/tiff" },
+    {
+      "id": "bmp",
+      "displayNameKey": "plugin/imagemagick.image.transcoder/target/bmp",
+      "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": false }
+    },
+    {
+      "id": "gif",
+      "displayNameKey": "plugin/imagemagick.image.transcoder/target/gif",
+      "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": false }
+    },
+    {
+      "id": "tiff",
+      "displayNameKey": "plugin/imagemagick.image.transcoder/target/tiff",
+      "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": false }
+    },
     { "id": "webp", "displayNameKey": "plugin/imagemagick.image.transcoder/target/webp" },
     { "id": "avif", "displayNameKey": "plugin/imagemagick.image.transcoder/target/avif" },
     { "id": "ico", "displayNameKey": "plugin/imagemagick.image.transcoder/target/ico" }
   ],
   "configSchema": {
-    "sections": []
+    "sections": [
+      {
+        "id": "targetSize",
+        "titleKey": "plugin/imagemagick.image.transcoder/section/targetSize",
+        "collapsedByDefault": false,
+        "fields": [
+          {
+            "key": "enableTargetSizeCompression",
+            "type": "Checkbox",
+            "labelKey": "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/label",
+            "helpKey": "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/help",
+            "defaultValue": false
+          },
+          {
+            "key": "retainTargetSizeCompressionSettings",
+            "type": "Checkbox",
+            "labelKey": "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/label",
+            "helpKey": "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/help",
+            "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": true },
+            "defaultValue": false
+          },
+          {
+            "key": "targetSizeUnit",
+            "type": "Select",
+            "labelKey": "plugin/imagemagick.image.transcoder/field/targetSizeUnit/label",
+            "helpKey": "plugin/imagemagick.image.transcoder/field/targetSizeUnit/help",
+            "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": true },
+            "defaultValue": "KB",
+            "options": [
+              { "id": "KB", "labelKey": "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/KB" },
+              { "id": "MB", "labelKey": "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/MB" }
+            ]
+          },
+          {
+            "key": "targetSizeMaxKb",
+            "type": "Number",
+            "labelKey": "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/label",
+            "helpKey": "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/help",
+            "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": true },
+            "defaultValue": 0,
+            "range": { "min": 0, "max": 500000, "step": 10 }
+          },
+          {
+            "key": "targetSizeMinKb",
+            "type": "Number",
+            "labelKey": "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/label",
+            "helpKey": "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/help",
+            "visibleIf": { "fieldKey": "enableTargetSizeCompression", "equals": true },
+            "defaultValue": 0,
+            "range": { "min": 0, "max": 500000, "step": 10 }
+          }
+        ]
+      }
+    ],
+    "fieldPersistOverrides": [
+      {
+        "when": { "fieldKey": "retainTargetSizeCompressionSettings", "equals": false },
+        "fields": {
+          "enableTargetSizeCompression": false
+        }
+      }
+    ]
   },
   "supportedLocales": [
     "en-US",

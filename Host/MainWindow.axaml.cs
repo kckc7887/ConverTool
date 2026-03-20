@@ -16,6 +16,9 @@ namespace Host;
 public partial class MainWindow : Window
 {
     private MainWindowViewModel? _vm;
+    private NamingTemplateTokenVm? _draggingToken;
+    private Border? _draggingTokenChip;
+    private Border? _hoveredTokenChip;
 
     public MainWindow()
     {
@@ -169,4 +172,105 @@ public partial class MainWindow : Window
 
         await dialog.ShowDialog(this);
     }
+
+    private async void OnNamingTemplateTagPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        // Clicking the delete button should not start dragging.
+        if (e.Source is Button)
+        {
+            return;
+        }
+
+        if (sender is not Border b || b.DataContext is not NamingTemplateTokenVm token)
+        {
+            return;
+        }
+
+        _draggingToken = token;
+        _draggingTokenChip = b;
+        b.Classes.Add("dragging");
+
+        try
+        {
+            // Payload isn't used for ordering; the VM state + token reference are enough.
+            var dragData = new DataTransfer();
+            dragData.Add(DataTransferItem.CreateText("convertool-naming-template-token"));
+
+            _ = await DragDrop.DoDragDropAsync(
+                e,
+                dragData,
+                DragDropEffects.Move);
+        }
+        finally
+        {
+            b.Classes.Remove("dragging");
+            _draggingToken = null;
+            _draggingTokenChip = null;
+
+            if (_hoveredTokenChip is { } hb)
+            {
+                hb.Classes.Remove("dropzone");
+                _hoveredTokenChip = null;
+            }
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnNamingTemplateTagDragOver(object? sender, DragEventArgs e)
+    {
+        if (_vm is null || _draggingToken is null)
+        {
+            return;
+        }
+
+        if (sender is not Border b || b.DataContext is not NamingTemplateTokenVm target)
+        {
+            e.DragEffects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        e.DragEffects = DragDropEffects.Move;
+        e.Handled = true;
+
+        // Reorder immediately to create a visual gap.
+        if (!ReferenceEquals(_draggingToken, target))
+        {
+            _vm.MoveNamingTemplateToken(_draggingToken, target);
+        }
+
+        if (!ReferenceEquals(_hoveredTokenChip, b))
+        {
+            _hoveredTokenChip?.Classes.Remove("dropzone");
+            _hoveredTokenChip = b;
+            _hoveredTokenChip.Classes.Add("dropzone");
+        }
+    }
+
+    private void OnNamingTemplateTagDrop(object? sender, DragEventArgs e)
+    {
+        if (_vm is null || _draggingToken is null)
+        {
+            return;
+        }
+
+        if (sender is Border b && b.DataContext is NamingTemplateTokenVm target && !ReferenceEquals(_draggingToken, target))
+        {
+            _vm.MoveNamingTemplateToken(_draggingToken, target);
+        }
+
+        if (sender is Border sb)
+        {
+            sb.Classes.Remove("dropzone");
+        }
+
+        e.Handled = true;
+    }
+
 }

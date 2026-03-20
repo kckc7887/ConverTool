@@ -5,8 +5,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Host", "Host\Host.csproj", "{000F70EE-0AE8-4F94-BCB3-2FD07EBF9986}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginAbstractions", "PluginAbstractions\PluginAbstractions.csproj", "{9EE5EA96-F469-45DB-9B57-2CA439260FD4}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,9 +18,5 @@ Global
 		{000F70EE-0AE8-4F94-BCB3-2FD07EBF9986}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{000F70EE-0AE8-4F94-BCB3-2FD07EBF9986}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{000F70EE-0AE8-4F94-BCB3-2FD07EBF9986}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9EE5EA96-F469-45DB-9B57-2CA439260FD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9EE5EA96-F469-45DB-9B57-2CA439260FD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9EE5EA96-F469-45DB-9B57-2CA439260FD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9EE5EA96-F469-45DB-9B57-2CA439260FD4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

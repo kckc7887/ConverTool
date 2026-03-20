@@ -20,9 +20,22 @@ From repository root:
 powershell -ExecutionPolicy Bypass -File .\installer\scripts\build-installer.ps1
 ```
 
+## 联调构建（Host + 契约 + `plugins-src` 示例）
+
+已按 **`docs/repositories.md`** §8 将契约仓库克隆到仓库根下 **`PluginAbstractions/`** 时，可在仓库根执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\installer\scripts\verify-dev-setup.ps1
+```
+
 ## Output
 
-- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.0.1` 时对应 `ConverTool-v1.0.1-setup.exe`）
+- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.0.2` 时对应 `ConverTool-v1.0.2-setup.exe`）
+- 若还需打 **full/lite 便携 zip**（在已执行 `build-installer.ps1` 生成 `artifacts/host/v<版本>/...` 之后）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\installer\scripts\package-portable-zips.ps1 -Version <版本>
+```
 
 ## 安装包图标在资源管理器里没变？
 

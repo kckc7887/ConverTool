@@ -38,13 +38,31 @@ public abstract class ConfigFieldVm : ObservableObject
     protected ConfigFieldVm(string key, string label, string? help)
     {
         Key = key;
-        Label = label;
-        Help = help;
+        _label = label;
+        _help = help;
     }
 
     public string Key { get; }
-    public string Label { get; }
-    public string? Help { get; }
+    private string _label = "";
+    public string Label
+    {
+        get => _label;
+        set => SetProperty(ref _label, value);
+    }
+
+    private string? _help;
+    public string? Help
+    {
+        get => _help;
+        set => SetProperty(ref _help, value);
+    }
+
+    private bool _isVisible = true;
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set => SetProperty(ref _isVisible, value);
+    }
 
     public abstract object? GetValue();
 }
