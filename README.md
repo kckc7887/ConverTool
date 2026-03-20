@@ -10,7 +10,7 @@
 | 插件 | 作用 | 说明 |
 |------|------|------|
 | **FFmpeg 视频转码** (`ffmpeg.video.transcoder`) | 视频容器/编码转换 | 依赖系统 **PATH** 中的 `ffmpeg`。支持 MP4、MKV、MOV、WebM、AVI 等目标格式，可在界面中调节质量（CRF）等选项。 |
-| **ImageMagick 图片转换** (`imagemagick.image.transcoder`) | 任意常见图片互转 | 依赖 **ImageMagick** 的 `magick` 命令。若未安装，插件会尝试自动下载便携包（含 7z 解压逻辑，见插件实现）。支持 PNG、JPEG、WebP、TIFF、ICO 等。 |
+| **ImageMagick 图片转换** (`imagemagick.image.transcoder`) | 任意常见图片互转与压缩 | 依赖 **ImageMagick** 的 `magick` 命令。若未安装，插件会尝试自动下载便携包（含 7z 解压逻辑，见插件实现）。支持 PNG、JPEG、WebP、TIFF、ICO 等。 |
 
 安装包或发布目录中的 `plugins/` 下已包含上述插件；卸载或替换插件后，仍可通过「添加插件」从 `plugins-src` 构建的 zip 重新安装。
 
