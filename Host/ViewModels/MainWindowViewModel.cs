@@ -668,6 +668,8 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(NamingTemplateHelp));
         RaisePropertyChanged(nameof(NamingTemplateBaseCandidateText));
         RaisePropertyChanged(nameof(NamingTemplateIndexCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateTimeDateCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateTimeHmsCandidateText));
         RaisePropertyChanged(nameof(NamingTemplateExtSuffixPrefix));
         RaisePropertyChanged(nameof(UseInputDirLabel));
         RaisePropertyChanged(nameof(KeepTempLabel));
