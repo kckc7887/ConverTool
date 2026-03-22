@@ -10,7 +10,6 @@
 - Windows
 - .NET SDK 8
 - Inno Setup 6 (`ISCC.exe`)
-- Python 3 + Pillow (`pip install Pillow`) — used to rebuild `installer/Assets/uninstall.ico` from `uninstall.png`
 
 ## Build
 
@@ -48,10 +47,11 @@ powershell -ExecutionPolicy Bypass -File .\installer\scripts\package-portable-zi
 2. **UAC 盾牌叠加**：若安装包请求管理员权限，系统可能在图标上叠一层盾牌，看起来像“默认安装程序”。
 3. **看的是旧文件**：确认打开的是 `artifacts` 里**最新编译时间**的 `ConverTool-v*-setup.exe`。
 
-## 卸载图标（垃圾桶）
+## 卸载入口图标
 
-- **“设置 → 应用”列表** 与 **开始菜单里的“卸载 ConverTool”快捷方式** 会使用 `uninstall.ico`（由 `Assets/uninstall.png` 生成）。
-- **`unins000.exe` 文件本身** 的图标仍由 Inno 的 `SetupIconFile` 决定（与安装包相同），这是 Inno Setup 的限制；若也要改该 exe 的图标，需要额外用资源编辑工具改 PE，不建议纳入常规构建。
+- **“设置 → 应用”** 中的应用图标由 **`UninstallDisplayIcon`** 指向 **`ConverTool.exe`**（与主程序一致）。
+- **开始菜单“卸载 ConverTool”** 快捷方式使用 **`ConverTool.exe`** 的图标（`[Icons]` 中 `IconFilename`），**不**再维护单独的 `uninstall.ico`。
+- **`unins000.exe`** 的图标仍由 Inno 的 `SetupIconFile`（安装包图标）决定，这是 Inno Setup 的常规限制。
 
 ## Installer behavior
 

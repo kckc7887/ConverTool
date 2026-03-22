@@ -9,112 +9,14 @@
       "PandocDocumentTranscoder/1.0.0": {
         "dependencies": {
           "ConverTool.PluginAbstractions": "1.1.0",
-          "DtronixPdf": "1.3.1",
-          "SkiaSharp": "3.116.1",
           "PluginAbstractions": "1.1.0.0"
         },
         "runtime": {
           "PandocDocumentTranscoder.dll": {}
         }
       },
-      "bblanchon.PDFium.Linux/134.0.6982": {
-        "runtimeTargets": {
-          "runtimes/linux-arm/native/libpdfium.so": {
-            "rid": "linux-arm",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-arm64/native/libpdfium.so": {
-            "rid": "linux-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-musl-arm64/native/libpdfium.so": {
-            "rid": "linux-musl-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-musl-x64/native/libpdfium.so": {
-            "rid": "linux-musl-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-musl-x86/native/libpdfium.so": {
-            "rid": "linux-musl-x86",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-x64/native/libpdfium.so": {
-            "rid": "linux-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/linux-x86/native/libpdfium.so": {
-            "rid": "linux-x86",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          }
-        }
-      },
-      "bblanchon.PDFium.macOS/134.0.6982": {
-        "runtimeTargets": {
-          "runtimes/osx-arm64/native/libpdfium.dylib": {
-            "rid": "osx-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/osx-x64/native/libpdfium.dylib": {
-            "rid": "osx-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          }
-        }
-      },
-      "bblanchon.PDFium.Win32/134.0.6982": {
-        "runtimeTargets": {
-          "runtimes/win-arm64/native/pdfium.dll": {
-            "rid": "win-arm64",
-            "assetType": "native",
-            "fileVersion": "134.0.6982.0"
-          },
-          "runtimes/win-x64/native/pdfium.dll": {
-            "rid": "win-x64",
-            "assetType": "native",
-            "fileVersion": "134.0.6982.0"
-          },
-          "runtimes/win-x86/native/pdfium.dll": {
-            "rid": "win-x86",
-            "assetType": "native",
-            "fileVersion": "134.0.6982.0"
-          }
-        }
-      },
-      "DtronixPdf/1.3.1": {
-        "dependencies": {
-          "PDFiumCore": "134.0.6982"
-        },
-        "runtime": {
-          "lib/net8.0/DtronixPdf.dll": {
-            "assemblyVersion": "1.3.1.0",
-            "fileVersion": "1.3.1.0"
-          }
-        }
-      },
       "Microsoft.NETCore.Platforms/1.1.0": {},
       "Microsoft.NETCore.Targets/1.1.0": {},
-      "PDFiumCore/134.0.6982": {
-        "dependencies": {
-          "bblanchon.PDFium.Linux": "134.0.6982",
-          "bblanchon.PDFium.Win32": "134.0.6982",
-          "bblanchon.PDFium.macOS": "134.0.6982"
-        },
-        "runtime": {
-          "lib/net8.0/PDFiumCore.dll": {
-            "assemblyVersion": "134.0.6982.0",
-            "fileVersion": "134.0.6982.0"
-          }
-        }
-      },
       "runtime.native.System/4.3.0": {
         "dependencies": {
           "Microsoft.NETCore.Platforms": "1.1.0",
@@ -125,46 +27,6 @@
         "dependencies": {
           "Microsoft.NETCore.Platforms": "1.1.0",
           "Microsoft.NETCore.Targets": "1.1.0"
-        }
-      },
-      "SkiaSharp/3.116.1": {
-        "dependencies": {
-          "SkiaSharp.NativeAssets.Win32": "3.116.1",
-          "SkiaSharp.NativeAssets.macOS": "3.116.1"
-        },
-        "runtime": {
-          "lib/net8.0/SkiaSharp.dll": {
-            "assemblyVersion": "3.116.0.0",
-            "fileVersion": "3.116.1.0"
-          }
-        }
-      },
-      "SkiaSharp.NativeAssets.macOS/3.116.1": {
-        "runtimeTargets": {
-          "runtimes/osx/native/libSkiaSharp.dylib": {
-            "rid": "osx",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          }
-        }
-      },
-      "SkiaSharp.NativeAssets.Win32/3.116.1": {
-        "runtimeTargets": {
-          "runtimes/win-arm64/native/libSkiaSharp.dll": {
-            "rid": "win-arm64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/win-x64/native/libSkiaSharp.dll": {
-            "rid": "win-x64",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          },
-          "runtimes/win-x86/native/libSkiaSharp.dll": {
-            "rid": "win-x86",
-            "assetType": "native",
-            "fileVersion": "0.0.0.0"
-          }
         }
       },
       "System.Buffers/4.3.0": {
@@ -334,34 +196,6 @@
       "serviceable": false,
       "sha512": ""
     },
-    "bblanchon.PDFium.Linux/134.0.6982": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-1wGy6h3f7EyAdzsB9Uq0bv8t8d2qxddfK7Ea8ynKqDcnGs4xe9dAWnK3x9KSUHJb7UpCyFghfvCwEH+xIFfKyQ==",
-      "path": "bblanchon.pdfium.linux/134.0.6982",
-      "hashPath": "bblanchon.pdfium.linux.134.0.6982.nupkg.sha512"
-    },
-    "bblanchon.PDFium.macOS/134.0.6982": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-UJAEyteKkxwYguqMJvsegPkdTdtYTwSg1QHZPOxm6EMGRZGv0hRVqIfJ63X7Tq/ajvSd+I4Bm7aSRSd5FeH+Ww==",
-      "path": "bblanchon.pdfium.macos/134.0.6982",
-      "hashPath": "bblanchon.pdfium.macos.134.0.6982.nupkg.sha512"
-    },
-    "bblanchon.PDFium.Win32/134.0.6982": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-XyGCCf5QQ6AQKu3kheKleM6G25sylbARBGPyVlQ/izLQCrMfc2zRBO3zdejxPxr6VwUFyn3nldlV/OynnFGntg==",
-      "path": "bblanchon.pdfium.win32/134.0.6982",
-      "hashPath": "bblanchon.pdfium.win32.134.0.6982.nupkg.sha512"
-    },
-    "DtronixPdf/1.3.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-rPJEr1XuyQFq5MQLBUHDICQCzlke4jx/nlFRkBtDr3244p1OWA23Sl7hzpJTbr0duXzfbbcLSOmyMIfjoR0Aeg==",
-      "path": "dtronixpdf/1.3.1",
-      "hashPath": "dtronixpdf.1.3.1.nupkg.sha512"
-    },
     "Microsoft.NETCore.Platforms/1.1.0": {
       "type": "package",
       "serviceable": true,
@@ -376,13 +210,6 @@
       "path": "microsoft.netcore.targets/1.1.0",
       "hashPath": "microsoft.netcore.targets.1.1.0.nupkg.sha512"
     },
-    "PDFiumCore/134.0.6982": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-wFZyAsxiCErBOp7SKuuxKJ7K1qAIusH1PBPWRgaOKIA80DSinBK0wZzak8J6qY3ix0q5GBcLlLvDsBPKVm/27w==",
-      "path": "pdfiumcore/134.0.6982",
-      "hashPath": "pdfiumcore.134.0.6982.nupkg.sha512"
-    },
     "runtime.native.System/4.3.0": {
       "type": "package",
       "serviceable": true,
@@ -396,27 +223,6 @@
       "sha512": "sha512-INBPonS5QPEgn7naufQFXJEp3zX6L4bwHgJ/ZH78aBTpeNfQMtf7C6VrAFhlq2xxWBveIOWyFzQjJ8XzHMhdOQ==",
       "path": "runtime.native.system.io.compression/4.3.0",
       "hashPath": "runtime.native.system.io.compression.4.3.0.nupkg.sha512"
-    },
-    "SkiaSharp/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-DNDwbRjP+aMo27dV2h/uHCVTcWubWWxHnPLiePNyl24f4Pv43mQ8AQQeseOrKR+J3AOCEs6t0sUjo0aa3j3RWQ==",
-      "path": "skiasharp/3.116.1",
-      "hashPath": "skiasharp.3.116.1.nupkg.sha512"
-    },
-    "SkiaSharp.NativeAssets.macOS/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-3KPvpKysDmEMt0NnAZPX5U6KFk0LmG/72/IjAIJemIksIZ0Tjs9pGpr3L+zboVCv1MLVoJLKl3nJDXUG6Jda6A==",
-      "path": "skiasharp.nativeassets.macos/3.116.1",
-      "hashPath": "skiasharp.nativeassets.macos.3.116.1.nupkg.sha512"
-    },
-    "SkiaSharp.NativeAssets.Win32/3.116.1": {
-      "type": "package",
-      "serviceable": true,
-      "sha512": "sha512-dRQ75MCI8oz6zAs2Y1w6pq6ARs4MhdNG+gf3doOxOxdnueDXffQLGQIxON54GDoxc0WjKOoHMKBR4DhaduwwQw==",
-      "path": "skiasharp.nativeassets.win32/3.116.1",
-      "hashPath": "skiasharp.nativeassets.win32.3.116.1.nupkg.sha512"
     },
     "System.Buffers/4.3.0": {
       "type": "package",

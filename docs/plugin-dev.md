@@ -361,7 +361,14 @@ plugins/
   imagemagick\7.1.2-17-portable-Q16-x64\
   pandoc\pandoc-3.6.4-windows-x86_64\
   libreoffice\25.8.5\
+  document-pdf-render\1.1.0\   ← 内置「文档」插件 PDF→图片（PDFium + SkiaSharp），首次需要时下载
 ```
+
+### 文档插件：PDF→图片依赖（`document-pdf-render`）
+
+与 Pandoc / LibreOffice 一样，**不在安装包内**携带 PDFium / SkiaSharp 等大体积依赖。用户**第一次**将 PDF 转为长图 / ZIP 时，插件从 **nuget.org**（flat container）按固定版本列表下载 **`DtronixPdf`、`PDFiumCore`、`bblanchon.PDFium.Win32`、`SkiaSharp`、`SkiaSharp.NativeAssets.Win32`** 等到 **`document-pdf-render\<版本>\`**，并把插件目录内自带的瘦客户端 **`PandocDocumentTranscoder.PdfRender.dll`**、**`PluginAbstractions.dll`** 复制进同一目录后加载。**无需**在 GitHub Release 上单独上传 zip。
+
+- **开发/离线**：设置环境变量 **`CONVERTOOL_PDF_RENDER_DIR`** 指向已具备完整 DLL 的目录（与缓存目录布局相同），可跳过下载；若目录不完整，会回退到默认缓存并尝试从 NuGet 拉取。
 
 ### API 参考
 

@@ -9,12 +9,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\PluginAbstractions\PluginAbstractions.csproj" />
+    <InternalsVisibleTo Include="PandocDocumentTranscoder.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DtronixPdf" Version="1.3.1" />
-    <PackageReference Include="SkiaSharp" Version="3.116.1" />
+    <ProjectReference Include="..\..\PluginAbstractions\PluginAbstractions.csproj" />
+    <ProjectReference Include="..\PandocDocumentTranscoder.PdfRender\PandocDocumentTranscoder.PdfRender.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
+
+  <Target Name="CopyPdfRenderShim" AfterTargets="Build" DependsOnTargets="ResolveProjectReferences">
+    <PropertyGroup>
+      <PdfRenderOutDir>$(MSBuildThisFileDirectory)..\PandocDocumentTranscoder.PdfRender\bin\$(Configuration)\net8.0\win-x64\</PdfRenderOutDir>
+    </PropertyGroup>
+    <Copy SourceFiles="$(PdfRenderOutDir)PandocDocumentTranscoder.PdfRender.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(PdfRenderOutDir)PandocDocumentTranscoder.PdfRender.dll')" />
+    <Copy SourceFiles="$(PdfRenderOutDir)PandocDocumentTranscoder.PdfRender.deps.json" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('$(PdfRenderOutDir)PandocDocumentTranscoder.PdfRender.deps.json')" />
+  </Target>
 
 </Project>

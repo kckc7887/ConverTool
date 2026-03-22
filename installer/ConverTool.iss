@@ -1,5 +1,5 @@
 #define AppName "ConverTool"
-#define AppVersion "1.1.0"
+#define AppVersion "1.1.1"
 #define AppPublisher "ConverTool"
 #define AppExeName "ConverTool.exe"
 
@@ -43,9 +43,6 @@ Name: "mode_lite"; Description: "{cm:InstallModeLite}"; GroupDescription: "{cm:C
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"
 
 [Files]
-; Uninstall branding (referenced by UninstallDisplayIcon + uninstall shortcut).
-Source: "Assets\uninstall.ico"; DestDir: "{app}"; DestName: "uninstall.ico"; Flags: ignoreversion
-
 ; Core payload (full/lite mode selection is controlled by tasks).
 Source: "..\artifacts\host\v{#AppVersion}\win-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "plugins\*"; Tasks: mode_full
 Source: "..\artifacts\host\v{#AppVersion}\win-x64-lite\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "plugins\*"; Tasks: mode_lite
@@ -57,7 +54,7 @@ Source: "..\Host\Plugins\pandoc.document.transcoder\*"; DestDir: "{app}\plugins\
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\uninstall.ico"
+Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"; IconFilename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
