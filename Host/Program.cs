@@ -2,28 +2,24 @@ using Avalonia;
 using System;
 using System.IO;
 using Host.Plugins;
+using Host.Services;
 
 namespace Host;
 
 class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
     [STAThread]
     public static void Main(string[] args)
     {
         try
         {
-            AppServices.Plugins = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
-            AppServices.Plugins.PrintSummary();
+            ServiceLocator.Initialize(AppContext.BaseDirectory);
+            ServiceLocator.GetService<PluginCatalog>().PrintSummary();
 
-            // Step 4 verification hook:
-            // `dotnet run --project Host/Host.csproj -c Debug -- route <path>`
             if (args.Length >= 2 && string.Equals(args[0], "route", StringComparison.OrdinalIgnoreCase))
             {
                 var inputPath = args[1];
-                var match = PluginRouter.RouteByInputPath(AppServices.Plugins, inputPath);
+                var match = PluginRouter.RouteByInputPath(ServiceLocator.GetService<PluginCatalog>(), inputPath);
                 Console.WriteLine(match is null
                     ? $"[route] No plugin matched input: {inputPath}"
                     : $"[route] Matched pluginId={match.Manifest.PluginId} for input: {inputPath}");
@@ -34,7 +30,6 @@ class Program
         }
         catch (Exception ex)
         {
-            // WinExe 下没有控制台时，用户看不到异常；因此落盘到文件，便于你排查。
             try
             {
                 var logPath = Path.Combine(AppContext.BaseDirectory, "startup-error.log");
@@ -48,7 +43,6 @@ class Program
             }
             catch
             {
-                // best effort
             }
 
             Console.Error.WriteLine(ex);
@@ -56,7 +50,6 @@ class Program
         }
     }
 
-    // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()

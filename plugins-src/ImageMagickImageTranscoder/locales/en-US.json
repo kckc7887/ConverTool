@@ -1,37 +1,37 @@
 {
   "strings": {
-    "plugin/imagemagick.image.transcoder/title": "ImageMagick Image Transcoder",
-    "plugin/imagemagick.image.transcoder/description": "Convert common image formats with ImageMagick (magick CLI). Optional lossy compression toward a target file size (see below).",
+    "plugin/imagemagick.image.transcoder/title": "Image Converter",
+    "plugin/imagemagick.image.transcoder/description": "Convert images to other formats. Control output file size if needed.",
 
-    "plugin/imagemagick.image.transcoder/target/avif": "AVIF (high compression)",
+    "plugin/imagemagick.image.transcoder/target/avif": "AVIF (smallest size)",
     "plugin/imagemagick.image.transcoder/target/bmp": "BMP (uncompressed)",
-    "plugin/imagemagick.image.transcoder/target/gif": "GIF (wide compatibility)",
-    "plugin/imagemagick.image.transcoder/target/ico": "ICO (icon)",
-    "plugin/imagemagick.image.transcoder/target/jpeg": "JPEG (smaller size)",
-    "plugin/imagemagick.image.transcoder/target/jpg": "JPG (smaller size)",
-    "plugin/imagemagick.image.transcoder/target/png": "PNG (lossless + alpha)",
-    "plugin/imagemagick.image.transcoder/target/tif": "TIF (same as TIFF)",
-    "plugin/imagemagick.image.transcoder/target/tiff": "TIFF (print / archive)",
-    "plugin/imagemagick.image.transcoder/target/webp": "WebP (web friendly)",
+    "plugin/imagemagick.image.transcoder/target/gif": "GIF (supports animation)",
+    "plugin/imagemagick.image.transcoder/target/ico": "ICO (icon file)",
+    "plugin/imagemagick.image.transcoder/target/jpeg": "JPEG (best for photos)",
+    "plugin/imagemagick.image.transcoder/target/jpg": "JPG (best for photos)",
+    "plugin/imagemagick.image.transcoder/target/png": "PNG (supports transparency)",
+    "plugin/imagemagick.image.transcoder/target/tif": "TIF (print quality)",
+    "plugin/imagemagick.image.transcoder/target/tiff": "TIFF (print quality)",
+    "plugin/imagemagick.image.transcoder/target/webp": "WebP (best for web)",
 
-    "plugin/imagemagick.image.transcoder/section/targetSize": "Target file size",
+    "plugin/imagemagick.image.transcoder/section/targetSize": "Control File Size",
 
-    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/label": "Enable target size compression",
-    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/help": "When enabled, the plugin tries to keep output size within the min/max range for lossy formats such as JPG / JPEG / WebP / AVIF (by adjusting quality, etc.). Lossless targets (PNG, BMP, GIF, TIFF) are hidden while this mode is on to avoid mistakes.",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/label": "Limit file size",
+    "plugin/imagemagick.image.transcoder/field/enableTargetSizeCompression/help": "When enabled, automatically adjusts quality to keep file size within your specified range. Only works with JPG, WebP, and AVIF formats.",
 
-    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/label": "Retain compression settings",
-    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/help": "When checked, the plugin reuses the last successful quality for the same target format + size range to speed up later runs.\n\nWhen unchecked, persisted user settings will save “enable target size compression” as off for the next launch (via Host `fieldPersistOverrides`); the current session can still use the feature normally.",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/label": "Remember my settings",
+    "plugin/imagemagick.image.transcoder/field/retainTargetSizeCompressionSettings/help": "When checked, these settings will be saved for next time. Uncheck to reset to defaults.",
 
     "plugin/imagemagick.image.transcoder/field/targetSizeUnit/label": "Size unit",
-    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/help": "Min/max target sizes below use this unit; the plugin converts to KB internally.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeUnit/help": "Choose the unit for file size.",
 
     "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/KB": "KB",
     "plugin/imagemagick.image.transcoder/field/targetSizeUnit/opt/MB": "MB",
 
-    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/label": "Target max size",
-    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/help": "Upper bound of the desired output file size (in the selected unit). Used with Min to define the range; must be > 0 to drive lossy search when appropriate.",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/label": "Maximum size",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMaxKb/help": "The output file will not exceed this size.",
 
-    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/label": "Target min size",
-    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/help": "Lower bound of the desired output file size (in the selected unit). Use together with Max; both zero means no range constraint (subject to “enable target size compression”)."
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/label": "Minimum size",
+    "plugin/imagemagick.image.transcoder/field/targetSizeMinKb/help": "The output file will not be smaller than this size. Set to 0 for no minimum."
   }
 }

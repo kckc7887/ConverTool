@@ -62,6 +62,9 @@ public sealed class TargetFormatModel
 
     [JsonPropertyName("visibleIf")]
     public VisibleIfModel? VisibleIf { get; set; }
+
+    [JsonPropertyName("inputExtensions")]
+    public string[]? InputExtensions { get; set; }
 }
 
 public sealed class I18nModel
@@ -146,6 +149,15 @@ public sealed class ConfigFieldModel
 
     [JsonPropertyName("visibleIf")]
     public VisibleIfModel? VisibleIf { get; set; }
+
+    [JsonPropertyName("visibleForInputExtensions")]
+    public string[]? VisibleForInputExtensions { get; set; }
+
+    /// <summary>
+    /// When non-empty, Host shows this field only if the selected target format id matches one of these (case-insensitive).
+    /// </summary>
+    [JsonPropertyName("visibleForTargetFormats")]
+    public string[]? VisibleForTargetFormats { get; set; }
 }
 
 public sealed class VisibleIfModel

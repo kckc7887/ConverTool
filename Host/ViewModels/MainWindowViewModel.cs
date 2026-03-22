@@ -17,7 +17,6 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Host.Plugins;
 using Host.Settings;
-using Host;
 using PluginAbstractions;
 
 namespace Host.ViewModels;
@@ -43,8 +42,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private PluginEntry? _activePlugin;
 
     private UserSettingsFile _userSettings = new();
+    private Dictionary<string, SettingItem> _settings = new();
+    private Dictionary<string, Dictionary<string, SettingItem>> _pluginSettings = new();
     private bool _loadingUserSettings;
-    private DispatcherTimer? _saveUserSettingsTimer;
     private readonly List<(ConfigFieldVm Field, PropertyChangedEventHandler Handler)> _configFieldHandlers = new();
 
     private bool _hasPlugins;
@@ -75,6 +75,12 @@ public sealed class MainWindowViewModel : ObservableObject
     public string NoPluginHintLabel { get; private set; } = "";
     public bool CanStart => CanEdit && HasPlugins;
 
+    private readonly NamingTemplateViewModel _namingTemplateViewModel;
+    public NamingTemplateViewModel NamingTemplateViewModel => _namingTemplateViewModel;
+
+    private readonly InputFileViewModel _inputFileViewModel;
+    public InputFileViewModel InputFileViewModel => _inputFileViewModel;
+
     public MainWindowViewModel(PluginCatalog catalog, PluginI18nService pluginI18n, I18nService hostI18n)
     {
         _catalog = catalog;
@@ -83,7 +89,61 @@ public sealed class MainWindowViewModel : ObservableObject
         _pluginI18n = pluginI18n;
         _hostI18n = hostI18n;
 
-        _userSettings = UserSettingsStore.TryLoad() ?? new UserSettingsFile();
+        _namingTemplateViewModel = new NamingTemplateViewModel();
+        _namingTemplateViewModel.NamingTemplateChanged += (s, e) =>
+        {
+            if (!_loadingUserSettings)
+            {
+                _userSettings.NamingTemplate = _namingTemplateViewModel.NamingTemplate;
+                var (custom1, custom2, custom3) = _namingTemplateViewModel.GetCustomTokenTexts();
+                _userSettings.CustomToken1Text = custom1;
+                _userSettings.CustomToken2Text = custom2;
+                _userSettings.CustomToken3Text = custom3;
+                ScheduleSaveUserSettings();
+            }
+        };
+
+        var allSupportedExtensions = GetAllSupportedExtensions(catalog);
+        _inputFileViewModel = new InputFileViewModel(allSupportedExtensions);
+        _inputFileViewModel.InputFilesChanged += (s, e) =>
+        {
+            RaisePropertyChanged(nameof(HasInputFiles));
+            RaisePropertyChanged(nameof(HasNoInputFiles));
+            if (!_loadingUserSettings)
+            {
+                UpdateConfigPlaceholder();
+                ReloadPluginContext();
+            }
+        };
+        _inputFileViewModel.UnsupportedFormatDetected += (s, e) =>
+        {
+            var files = string.Join(", ", e.UnsupportedFiles);
+            var msg = _hostI18n.T("host/input/unsupportedFormat");
+            AppendLog($"[host] {msg}: {files}");
+        };
+
+        // 加载本体配置（只从配置文件读取）
+        _settings = SettingManager.LoadHostSettings();
+        
+        // 从配置文件读取设置（Value为空时使用Default）
+        _userSettings = new UserSettingsFile
+        {
+            Locale = SettingManager.GetValue<string>(_settings, "Locale"),
+            OutputDir = SettingManager.GetValue<string>(_settings, "OutputDir"),
+            UseInputDirAsOutput = SettingManager.GetValue<bool>(_settings, "UseInputDirAsOutput"),
+            NamingTemplate = SettingManager.GetValue<string>(_settings, "NamingTemplate"),
+            CustomToken1Text = SettingManager.GetValue<string>(_settings, "CustomToken1Text"),
+            CustomToken2Text = SettingManager.GetValue<string>(_settings, "CustomToken2Text"),
+            CustomToken3Text = SettingManager.GetValue<string>(_settings, "CustomToken3Text"),
+            EnableParallelProcessing = SettingManager.GetValue<bool>(_settings, "EnableParallelProcessing"),
+            Parallelism = SettingManager.GetValue<int>(_settings, "Parallelism"),
+            KeepTemp = SettingManager.GetValue<bool>(_settings, "KeepTemp"),
+            Plugins = SettingManager.GetValue<Dictionary<string, PluginUserSettings>>(_settings, "Plugins")
+        };
+
+        // 加载所有插件配置（与 PluginCatalog 中各插件目录下的 config.json 一致）
+        _pluginSettings = SettingManager.LoadAllPluginSettings(_catalog);
+        
         if (!string.IsNullOrWhiteSpace(_userSettings.Locale))
         {
             _hostI18n.SetLocale(AppContext.BaseDirectory, _userSettings.Locale);
@@ -115,10 +175,6 @@ public sealed class MainWindowViewModel : ObservableObject
         NamingTemplateLabel = _hostI18n.T("host/output/templateLabel");
         NamingTemplateHelp = _hostI18n.T("host/output/templateHelp");
         NamingTemplateExtSuffixPrefix = _hostI18n.T("host/output/targetExtSuffixPrefix");
-        _namingTemplateTokenBaseText = _hostI18n.T("host/output/namingTemplateTokenBaseText");
-        _namingTemplateTokenIndexText = _hostI18n.T("host/output/namingTemplateTokenIndexText");
-        _namingTemplateTokenTimeDateText = _hostI18n.T("host/output/namingTemplateTokenTimeDateText");
-        _namingTemplateTokenTimeHmsText = _hostI18n.T("host/output/namingTemplateTokenTimeHmsText");
         UseInputDirLabel = _hostI18n.T("host/output/useInputDir");
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
@@ -129,42 +185,39 @@ public sealed class MainWindowViewModel : ObservableObject
         ParallelismLabel = _hostI18n.T("host/process/parallelism");
         ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
 
-        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        OutputDir = string.IsNullOrWhiteSpace(docs)
-            ? Path.Combine(AppContext.BaseDirectory, "output")
-            : Path.Combine(docs, "ConverToolOutput");
-        NamingTemplate = "{base}";
-
         _loadingUserSettings = true;
         try
         {
-            if (!string.IsNullOrWhiteSpace(_userSettings.OutputDir))
-            {
-                OutputDir = _userSettings.OutputDir.Trim();
-            }
-
-            UseInputDirAsOutput = _userSettings.UseInputDirAsOutput ?? true;
-            NamingTemplate = _userSettings.NamingTemplate is null
-                ? "{base}"
-                : _userSettings.NamingTemplate.Trim();
-            EnableParallelProcessing = _userSettings.EnableParallelProcessing;
-            Parallelism = Math.Clamp(_userSettings.Parallelism, 1, 8);
-            KeepTemp = _userSettings.KeepTemp;
-            // Input files are runtime data; collection starts empty on each launch.
+            // 须先于 SetTokenTexts：从 config 读入的自定义标签要写入字段并同步子 VM，否则 TextBox 绑定拿不到值
+            ApplyCustomTokensFromUserSettingsToUi();
+            ApplyNamingTemplateHostI18n();
         }
         finally
         {
             _loadingUserSettings = false;
         }
 
-        // Initialize naming template tokens from persisted template string.
-        InitNamingTemplateTokensFromTemplate(NamingTemplate);
+        _loadingUserSettings = true;
+        try
+        {
+            // 只从配置文件读取值，禁止代码默认值（OutputDir 支持 %USERPROFILE% 等环境变量）
+            OutputDir = ExpandOutputPath(_userSettings.OutputDir);
+            UseInputDirAsOutput = _userSettings.UseInputDirAsOutput ?? true;
+            _namingTemplateViewModel.NamingTemplate = _userSettings.NamingTemplate ?? "";
+            EnableParallelProcessing = _userSettings.EnableParallelProcessing ?? false;
+            Parallelism = _userSettings.Parallelism ?? 0;
+            KeepTemp = _userSettings.KeepTemp ?? false;
+        }
+        finally
+        {
+            _loadingUserSettings = false;
+        }
 
-        InputFiles.CollectionChanged += OnInputFilesCollectionChanged;
+        _namingTemplateViewModel.Initialize(_namingTemplateViewModel.NamingTemplate);
 
         StartCommand = new AsyncCommand(StartAsync);
-        BrowseInputCommand = new AsyncCommand(BrowseInputAsync);
-        ClearAllInputCommand = new SyncCommand(() => InputFiles.Clear());
+        BrowseInputCommand = new AsyncCommand(() => _inputFileViewModel.BrowseInputAsync());
+        ClearAllInputCommand = new SyncCommand(() => _inputFileViewModel.Clear());
         BrowseOutputDirCommand = new AsyncCommand(BrowseOutputDirAsync);
         BrowseConfigPathCommand = new AsyncCommand<PathFieldVm>(BrowseConfigPathAsync);
         PauseCommand = new AsyncCommand(TogglePauseAsync);
@@ -172,12 +225,13 @@ public sealed class MainWindowViewModel : ObservableObject
         AddPluginCommand = new AsyncCommand(AddPluginAsync);
         AddNamingTemplateTokenCommand = new AsyncCommand<string>(v =>
         {
-            ToggleNamingTemplateCandidate(v ?? "");
+            _namingTemplateViewModel.ToggleNamingTemplateCandidate(v ?? "");
             return Task.CompletedTask;
         });
 
         _hostI18n.LocaleChanged += (_, _) => ReloadHostStrings();
         PropertyChanged += OnVmPersistablePropertyChanged;
+        TargetFormats.CollectionChanged += (_, _) => RaisePropertyChanged(nameof(HasTargetFormats));
         ReloadPluginContext();
     }
 
@@ -215,6 +269,11 @@ public sealed class MainWindowViewModel : ObservableObject
     public string TargetFormatLabel { get; private set; } = "";
     public string OutputDirLabel { get; private set; } = "";
     public string NamingTemplateLabel { get; private set; } = "";
+    /// <summary>命名模板区「自定义标签」行标题（中英文由 Host locales 提供）。</summary>
+    public string NamingTemplateCustomRowLabel { get; private set; } = "";
+    public string CustomToken1Watermark { get; private set; } = "";
+    public string CustomToken2Watermark { get; private set; } = "";
+    public string CustomToken3Watermark { get; private set; } = "";
     public string NamingTemplateHelp { get; private set; } = "";
     public string NamingTemplateExtSuffixPrefix { get; private set; } = "";
     public string UseInputDirLabel { get; private set; } = "";
@@ -229,29 +288,11 @@ public sealed class MainWindowViewModel : ObservableObject
     public string LanguageLabel { get; private set; } = "";
 
     // ---- inputs ----
-    public ObservableCollection<InputFileItemVm> InputFiles { get; } = new();
+    public ObservableCollection<InputFileItemVm> InputFiles => _inputFileViewModel.InputFiles;
 
-    public bool HasInputFiles => InputFiles.Count > 0;
+    public bool HasInputFiles => _inputFileViewModel.HasInputFiles;
 
-    public bool HasNoInputFiles => InputFiles.Count == 0;
-
-    private void OnInputFilesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-    {
-        RaisePropertyChanged(nameof(HasInputFiles));
-        RaisePropertyChanged(nameof(HasNoInputFiles));
-        if (_loadingUserSettings)
-        {
-            return;
-        }
-
-        UpdateConfigPlaceholder();
-        ReloadPluginContext();
-    }
-
-    private void RemoveInputFile(InputFileItemVm item)
-    {
-        InputFiles.Remove(item);
-    }
+    public bool HasNoInputFiles => _inputFileViewModel.HasNoInputFiles;
 
     private string _outputDir = "";
     public string OutputDir { get => _outputDir; set => SetProperty(ref _outputDir, value); }
@@ -265,73 +306,108 @@ public sealed class MainWindowViewModel : ObservableObject
     private int _parallelism = 2;
     public int Parallelism { get => _parallelism; set => SetProperty(ref _parallelism, Math.Clamp(value, 1, 8)); }
 
-    private string _namingTemplate = "";
-
-    // ---- Naming template tokens (Reorderable Tokenized Tag Input) ----
-    private bool _syncingNamingTemplateTokens;
-
-    private string _namingTemplateTokenBaseText = "base";
-    public string NamingTemplateTokenBaseText => _namingTemplateTokenBaseText;
-
-    private string _namingTemplateTokenIndexText = "index";
-    public string NamingTemplateTokenIndexText => _namingTemplateTokenIndexText;
-
-    private string _namingTemplateTokenTimeDateText = "{timeYmd}";
-    private string _namingTemplateTokenTimeHmsText = "{timeHms}";
-
-    public ObservableCollection<NamingTemplateTokenVm> NamingTemplateSelectedTags { get; } = new();
-
-    private bool _hasNamingTemplateBaseToken;
-    public bool HasNamingTemplateBaseToken
-    {
-        get => _hasNamingTemplateBaseToken;
-        private set => SetProperty(ref _hasNamingTemplateBaseToken, value);
-    }
-
-    private bool _hasNamingTemplateIndexToken;
-    public bool HasNamingTemplateIndexToken
-    {
-        get => _hasNamingTemplateIndexToken;
-        private set => SetProperty(ref _hasNamingTemplateIndexToken, value);
-    }
-
-    private bool _hasNamingTemplateTimeYmdToken;
-    public bool HasNamingTemplateTimeYmdToken
-    {
-        get => _hasNamingTemplateTimeYmdToken;
-        private set => SetProperty(ref _hasNamingTemplateTimeYmdToken, value);
-    }
-
-    private bool _hasNamingTemplateTimeHmsToken;
-    public bool HasNamingTemplateTimeHmsToken
-    {
-        get => _hasNamingTemplateTimeHmsToken;
-        private set => SetProperty(ref _hasNamingTemplateTimeHmsToken, value);
-    }
-
-    public string NamingTemplateBaseCandidateText => NamingTemplateTokenBaseText;
-    public string NamingTemplateBaseCandidateValue => "{base}";
-    public string NamingTemplateIndexCandidateText => NamingTemplateTokenIndexText;
-    public string NamingTemplateIndexCandidateValue => "{index}";
-
-    public string NamingTemplateTimeDateCandidateText => _namingTemplateTokenTimeDateText;
-    public string NamingTemplateTimeDateCandidateValue => "{timeYmd}";
-
-    public string NamingTemplateTimeHmsCandidateText => _namingTemplateTokenTimeHmsText;
-    public string NamingTemplateTimeHmsCandidateValue => "{timeHms}";
-
-    public ObservableCollection<string> NamingTemplateActionCandidates { get; } = new()
-    {
-        "{base}",
-        "{index}",
-        "{timeYmd}",
-        "{timeHms}",
-    };
+    private string _customToken1Text = "";
+    private string _customToken2Text = "";
+    private string _customToken3Text = "";
 
     public string NamingTemplate
     {
-        get => _namingTemplate;
-        set => SetProperty(ref _namingTemplate, NormalizeNamingTemplate(value));
+        get => _namingTemplateViewModel.NamingTemplate;
+        set
+        {
+            if (_namingTemplateViewModel.NamingTemplate != value)
+            {
+                _namingTemplateViewModel.NamingTemplate = value;
+                RaisePropertyChanged();
+            }
+        }
+    }
+
+    public ObservableCollection<NamingTemplateTokenVm> NamingTemplateSelectedTags => _namingTemplateViewModel.NamingTemplateSelectedTags;
+
+    public bool HasNamingTemplateBaseToken => _namingTemplateViewModel.HasNamingTemplateBaseToken;
+    public bool HasNamingTemplateIndexToken => _namingTemplateViewModel.HasNamingTemplateIndexToken;
+    public bool HasNamingTemplateTimeYmdToken => _namingTemplateViewModel.HasNamingTemplateTimeYmdToken;
+    public bool HasNamingTemplateTimeHmsToken => _namingTemplateViewModel.HasNamingTemplateTimeHmsToken;
+    public bool HasNamingTemplateCustom1Token => _namingTemplateViewModel.HasNamingTemplateCustom1Token;
+    public bool HasNamingTemplateCustom2Token => _namingTemplateViewModel.HasNamingTemplateCustom2Token;
+    public bool HasNamingTemplateCustom3Token => _namingTemplateViewModel.HasNamingTemplateCustom3Token;
+
+    public string NamingTemplateTokenBaseText => _namingTemplateViewModel.NamingTemplateTokenBaseText;
+    public string NamingTemplateTokenIndexText => _namingTemplateViewModel.NamingTemplateTokenIndexText;
+
+    public string NamingTemplateBaseCandidateText => _namingTemplateViewModel.NamingTemplateBaseCandidateText;
+    public string NamingTemplateBaseCandidateValue => _namingTemplateViewModel.NamingTemplateBaseCandidateValue;
+    public string NamingTemplateIndexCandidateText => _namingTemplateViewModel.NamingTemplateIndexCandidateText;
+    public string NamingTemplateIndexCandidateValue => _namingTemplateViewModel.NamingTemplateIndexCandidateValue;
+
+    public string NamingTemplateTimeDateCandidateText => _namingTemplateViewModel.NamingTemplateTimeDateCandidateText;
+    public string NamingTemplateTimeDateCandidateValue => _namingTemplateViewModel.NamingTemplateTimeDateCandidateValue;
+
+    public string NamingTemplateTimeHmsCandidateText => _namingTemplateViewModel.NamingTemplateTimeHmsCandidateText;
+    public string NamingTemplateTimeHmsCandidateValue => _namingTemplateViewModel.NamingTemplateTimeHmsCandidateValue;
+
+    public string NamingTemplateCustom1CandidateText => _namingTemplateViewModel.NamingTemplateCustom1CandidateText;
+    public string NamingTemplateCustom1CandidateValue => _namingTemplateViewModel.NamingTemplateCustom1CandidateValue;
+    public string NamingTemplateCustom2CandidateText => _namingTemplateViewModel.NamingTemplateCustom2CandidateText;
+    public string NamingTemplateCustom2CandidateValue => _namingTemplateViewModel.NamingTemplateCustom2CandidateValue;
+    public string NamingTemplateCustom3CandidateText => _namingTemplateViewModel.NamingTemplateCustom3CandidateText;
+    public string NamingTemplateCustom3CandidateValue => _namingTemplateViewModel.NamingTemplateCustom3CandidateValue;
+
+    public ObservableCollection<string> NamingTemplateActionCandidates => _namingTemplateViewModel.NamingTemplateActionCandidates;
+
+    // 自定义标签文本（双向绑定；字段为绑定真实来源，与子 VM 同步）
+    public string CustomToken1Text
+    {
+        get => _customToken1Text;
+        set
+        {
+            if (!SetProperty(ref _customToken1Text, value))
+                return;
+            _namingTemplateViewModel.SetCustomTokenTexts(_customToken1Text, _customToken2Text, _customToken3Text);
+            RaiseCustomTokenChipCandidateTextsChanged();
+            if (!_loadingUserSettings)
+                ScheduleSaveUserSettings();
+        }
+    }
+
+    public string CustomToken2Text
+    {
+        get => _customToken2Text;
+        set
+        {
+            if (!SetProperty(ref _customToken2Text, value))
+                return;
+            _namingTemplateViewModel.SetCustomTokenTexts(_customToken1Text, _customToken2Text, _customToken3Text);
+            RaiseCustomTokenChipCandidateTextsChanged();
+            if (!_loadingUserSettings)
+                ScheduleSaveUserSettings();
+        }
+    }
+
+    public string CustomToken3Text
+    {
+        get => _customToken3Text;
+        set
+        {
+            if (!SetProperty(ref _customToken3Text, value))
+                return;
+            _namingTemplateViewModel.SetCustomTokenTexts(_customToken1Text, _customToken2Text, _customToken3Text);
+            RaiseCustomTokenChipCandidateTextsChanged();
+            if (!_loadingUserSettings)
+                ScheduleSaveUserSettings();
+        }
+    }
+
+    /// <summary>
+    /// 上方「自定义」ToggleButton 绑定的是 <see cref="NamingTemplateCustom1CandidateText"/> 等主 VM 属性；
+    /// 子 VM 已通知，但不会冒泡到主 VM，需显式转发。
+    /// </summary>
+    private void RaiseCustomTokenChipCandidateTextsChanged()
+    {
+        RaisePropertyChanged(nameof(NamingTemplateCustom1CandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateCustom2CandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateCustom3CandidateText));
     }
 
     private bool _keepTemp;
@@ -341,20 +417,38 @@ public sealed class MainWindowViewModel : ObservableObject
     public ObservableCollection<TargetFormatVm> TargetFormats { get; } = new();
 
     private TargetFormatVm? _selectedTargetFormat;
+
+    /// <summary>当前选中的目标格式（须为 <see cref="TargetFormats"/> 中的实例）。</summary>
     public TargetFormatVm? SelectedTargetFormat
     {
         get => _selectedTargetFormat;
         set
         {
-            if (SetProperty(ref _selectedTargetFormat, value))
+            if (!SetProperty(ref _selectedTargetFormat, value))
             {
-                RaisePropertyChanged(nameof(NamingTemplateExtSuffix));
-                RaisePropertyChanged(nameof(HasNamingTemplateExtSuffix));
+                return;
+            }
+
+            RaisePropertyChanged(nameof(SelectedTargetFormatIdDisplay));
+            RaisePropertyChanged(nameof(SelectedTargetFormatDisplayText));
+            RaisePropertyChanged(nameof(NamingTemplateExtSuffix));
+            RaisePropertyChanged(nameof(HasNamingTemplateExtSuffix));
+            if (!_isReevaluatingUiRules && !_loadingUserSettings)
+            {
+                ReevaluateUiRules(changedFieldKey: null);
             }
         }
     }
 
-    // UI: show the final fixed suffix next to the naming template input box.
+    /// <summary>当前选中项的 <c>id</c>（manifest <c>supportedTargetFormats[].id</c>）。</summary>
+    public string SelectedTargetFormatIdDisplay => SelectedTargetFormat?.Id ?? "";
+
+    /// <summary>折叠态展示：<c>displayNameKey</c> 解析后的文案（与 <see cref="TargetFormatVm.Text"/> 一致）。</summary>
+    public string SelectedTargetFormatDisplayText => SelectedTargetFormat?.Text ?? "";
+
+    /// <summary>当前插件下是否存在至少一个可选目标格式（由输入扩展名与 visibleIf 过滤后）。</summary>
+    public bool HasTargetFormats => TargetFormats.Count > 0;
+
     public string NamingTemplateExtSuffix
     {
         get
@@ -366,10 +460,9 @@ public sealed class MainWindowViewModel : ObservableObject
             }
 
             var suffix = "." + id;
-            var cur = (_namingTemplate ?? "").Trim().TrimEnd('.');
+            var cur = (_namingTemplateViewModel.NamingTemplate ?? "").Trim().TrimEnd('.');
             if (!string.IsNullOrWhiteSpace(cur) && cur.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
             {
-                // User already typed the suffix into the template; hide the fixed label to avoid visual duplication.
                 return "";
             }
 
@@ -379,157 +472,16 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public bool HasNamingTemplateExtSuffix => !string.IsNullOrWhiteSpace(NamingTemplateExtSuffix);
 
-    private static string NormalizeNamingTemplate(string? template)
-    {
-        var t = (template ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(t))
-        {
-            return "";
-        }
-
-        // Keep backward compatibility: if user previously typed `{base}.{ext}`,
-        // normalize to `{base}` because the extension is now shown/added on the right.
-        t = Regex.Replace(t, @"\.\{ext\}", "", RegexOptions.IgnoreCase);
-        t = Regex.Replace(t, @"\{ext\}", "", RegexOptions.IgnoreCase);
-
-        t = t.Trim();
-        return string.IsNullOrWhiteSpace(t) ? "" : t;
-    }
-
-    private void InitNamingTemplateTokensFromTemplate(string template)
-    {
-        _syncingNamingTemplateTokens = true;
-        try
-        {
-            NamingTemplateSelectedTags.Clear();
-
-            var t = (template ?? "").Trim();
-            // Allow empty list: if user cleared all tokens, NamingTemplate can be "".
-
-            var parts = t.Split('_', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
-            {
-                NamingTemplateSelectedTags.Add(new NamingTemplateTokenVm(
-                    part,
-                    NamingTemplateTokenBaseText,
-                    NamingTemplateTokenIndexText,
-                    _namingTemplateTokenTimeDateText,
-                    _namingTemplateTokenTimeHmsText,
-                    RemoveNamingTemplateToken
-                ));
-            }
-        }
-        finally
-        {
-            _syncingNamingTemplateTokens = false;
-        }
-
-        RecomputeNamingTemplateFromSelectedTags();
-    }
-
-    private void RecomputeNamingTemplateFromSelectedTags()
-    {
-        if (_syncingNamingTemplateTokens)
-        {
-            return;
-        }
-
-        var composed = string.Join("_", NamingTemplateSelectedTags.Select(t => t.Value).Where(v => v is not null));
-
-        // Set the persisted template string for the host output engine.
-        NamingTemplate = composed;
-
-        UpdateActionCandidateStates();
-    }
-
-    private void UpdateActionCandidateStates()
-    {
-        var hasBase = NamingTemplateSelectedTags.Any(t =>
-            string.Equals(t.Value, "{base}", StringComparison.OrdinalIgnoreCase));
-        var hasIndex = NamingTemplateSelectedTags.Any(t =>
-            string.Equals(t.Value, "{index}", StringComparison.OrdinalIgnoreCase));
-
-        HasNamingTemplateBaseToken = hasBase;
-        HasNamingTemplateIndexToken = hasIndex;
-        HasNamingTemplateTimeYmdToken = NamingTemplateSelectedTags.Any(t =>
-            string.Equals(t.Value, "{timeYmd}", StringComparison.OrdinalIgnoreCase));
-        HasNamingTemplateTimeHmsToken = NamingTemplateSelectedTags.Any(t =>
-            string.Equals(t.Value, "{timeHms}", StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ToggleNamingTemplateCandidate(string? value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-        {
-            return;
-        }
-
-        var existing = NamingTemplateSelectedTags.FirstOrDefault(t =>
-            string.Equals(t.Value, v, StringComparison.OrdinalIgnoreCase));
-
-        if (existing is not null)
-        {
-            RemoveNamingTemplateToken(existing);
-        }
-        else
-        {
-            AddNamingTemplateToken(v);
-        }
-    }
-
-    private void RemoveNamingTemplateToken(NamingTemplateTokenVm token)
-    {
-        if (token is null)
-        {
-            return;
-        }
-
-        NamingTemplateSelectedTags.Remove(token);
-        RecomputeNamingTemplateFromSelectedTags();
-    }
-
-    public void AddNamingTemplateToken(string value)
-    {
-        var v = (value ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(v))
-        {
-            return;
-        }
-
-        NamingTemplateSelectedTags.Add(new NamingTemplateTokenVm(
-            v,
-            NamingTemplateTokenBaseText,
-            NamingTemplateTokenIndexText,
-            _namingTemplateTokenTimeDateText,
-            _namingTemplateTokenTimeHmsText,
-            RemoveNamingTemplateToken
-        ));
-        RecomputeNamingTemplateFromSelectedTags();
-    }
-
-    public void MoveNamingTemplateToken(NamingTemplateTokenVm from, NamingTemplateTokenVm to)
-    {
-        if (from is null || to is null || ReferenceEquals(from, to))
-        {
-            return;
-        }
-
-        var fromIndex = NamingTemplateSelectedTags.IndexOf(from);
-        var toIndex = NamingTemplateSelectedTags.IndexOf(to);
-        if (fromIndex < 0 || toIndex < 0 || fromIndex == toIndex)
-        {
-            return;
-        }
-
-        NamingTemplateSelectedTags.Move(fromIndex, toIndex);
-        RecomputeNamingTemplateFromSelectedTags();
-    }
-
     public ObservableCollection<ConfigFieldVm> ConfigFields { get; } = new();
 
     // ---- UI rules (visibleIf / dependencies) ----
     private readonly Dictionary<string, VisibleIfModel?> _visibleIfByFieldKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, string[]?> _visibleForInputExtensionsByFieldKey =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, string[]?> _visibleForTargetFormatsByFieldKey =
         new(StringComparer.OrdinalIgnoreCase);
 
     private readonly List<FieldBoolRelationModel> _fieldBoolRelations = new();
@@ -573,7 +525,11 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncCommand<string> AddNamingTemplateTokenCommand { get; }
 
     // Host will set this from code-behind (TopLevel required for picker).
-    public TopLevel? TopLevel { get; set; }
+    public TopLevel? TopLevel
+    {
+        get => _inputFileViewModel.TopLevel;
+        set => _inputFileViewModel.TopLevel = value;
+    }
     public Func<string, Task>? ShowErrorDialogAsync { get; set; }
 
     private CancellationTokenSource? _runCts;
@@ -595,6 +551,35 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public bool CanEdit => !_isBusy;
+
+    private void ApplyNamingTemplateHostI18n()
+    {
+        _namingTemplateViewModel.SetTokenTexts(
+            _hostI18n.T("host/output/namingTemplateTokenBaseText"),
+            _hostI18n.T("host/output/namingTemplateTokenIndexText"),
+            _hostI18n.T("host/output/namingTemplateTokenTimeDateText"),
+            _hostI18n.T("host/output/namingTemplateTokenTimeHmsText"));
+        _namingTemplateViewModel.SetCustomTokenDefaultLabels(
+            _hostI18n.T("host/output/namingTemplateCustom1Default"),
+            _hostI18n.T("host/output/namingTemplateCustom2Default"),
+            _hostI18n.T("host/output/namingTemplateCustom3Default"));
+
+        NamingTemplateCustomRowLabel = _hostI18n.T("host/output/namingTemplateCustomRowLabel");
+        CustomToken1Watermark = _hostI18n.T("host/output/namingTemplateCustom1Watermark");
+        CustomToken2Watermark = _hostI18n.T("host/output/namingTemplateCustom2Watermark");
+        CustomToken3Watermark = _hostI18n.T("host/output/namingTemplateCustom3Watermark");
+        RaisePropertyChanged(nameof(NamingTemplateCustomRowLabel));
+        RaisePropertyChanged(nameof(CustomToken1Watermark));
+        RaisePropertyChanged(nameof(CustomToken2Watermark));
+        RaisePropertyChanged(nameof(CustomToken3Watermark));
+
+        // 触发芯片文本属性变更通知（基础标签和自定义标签）
+        RaisePropertyChanged(nameof(NamingTemplateBaseCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateIndexCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateTimeDateCandidateText));
+        RaisePropertyChanged(nameof(NamingTemplateTimeHmsCandidateText));
+        RaiseCustomTokenChipCandidateTextsChanged();
+    }
 
     private void UpdateConfigPlaceholder()
     {
@@ -634,10 +619,6 @@ public sealed class MainWindowViewModel : ObservableObject
         NamingTemplateLabel = _hostI18n.T("host/output/templateLabel");
         NamingTemplateHelp = _hostI18n.T("host/output/templateHelp");
         UseInputDirLabel = _hostI18n.T("host/output/useInputDir");
-        _namingTemplateTokenBaseText = _hostI18n.T("host/output/namingTemplateTokenBaseText");
-        _namingTemplateTokenIndexText = _hostI18n.T("host/output/namingTemplateTokenIndexText");
-        _namingTemplateTokenTimeDateText = _hostI18n.T("host/output/namingTemplateTokenTimeDateText");
-        _namingTemplateTokenTimeHmsText = _hostI18n.T("host/output/namingTemplateTokenTimeHmsText");
         KeepTempLabel = _hostI18n.T("host/process/keepTemp");
         StartLabel = _hostI18n.T("host/process/start");
         PauseLabel = _hostI18n.T("host/process/pause");
@@ -646,6 +627,8 @@ public sealed class MainWindowViewModel : ObservableObject
         EnableParallelLabel = _hostI18n.T("host/process/parallelEnable");
         ParallelismLabel = _hostI18n.T("host/process/parallelism");
         ProcessLogSectionLabel = _hostI18n.T("host/process/logSection");
+
+        ApplyNamingTemplateHostI18n();
 
         RaisePropertyChanged(nameof(LanguageLabel));
         RaisePropertyChanged(nameof(InputHeader));
@@ -665,11 +648,11 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(TargetFormatLabel));
         RaisePropertyChanged(nameof(OutputDirLabel));
         RaisePropertyChanged(nameof(NamingTemplateLabel));
+        RaisePropertyChanged(nameof(NamingTemplateCustomRowLabel));
+        RaisePropertyChanged(nameof(CustomToken1Watermark));
+        RaisePropertyChanged(nameof(CustomToken2Watermark));
+        RaisePropertyChanged(nameof(CustomToken3Watermark));
         RaisePropertyChanged(nameof(NamingTemplateHelp));
-        RaisePropertyChanged(nameof(NamingTemplateBaseCandidateText));
-        RaisePropertyChanged(nameof(NamingTemplateIndexCandidateText));
-        RaisePropertyChanged(nameof(NamingTemplateTimeDateCandidateText));
-        RaisePropertyChanged(nameof(NamingTemplateTimeHmsCandidateText));
         RaisePropertyChanged(nameof(NamingTemplateExtSuffixPrefix));
         RaisePropertyChanged(nameof(UseInputDirLabel));
         RaisePropertyChanged(nameof(KeepTempLabel));
@@ -681,16 +664,20 @@ public sealed class MainWindowViewModel : ObservableObject
         RaisePropertyChanged(nameof(EnableParallelLabel));
         RaisePropertyChanged(nameof(ParallelismLabel));
 
-        // plugin strings depend on locale too
         ReloadPluginContext();
+    }
 
-        // Rebuild tokens so that token display text is updated to the current locale.
-        InitNamingTemplateTokensFromTemplate(NamingTemplate);
+    public void MoveNamingTemplateToken(NamingTemplateTokenVm from, NamingTemplateTokenVm to)
+    {
+        _namingTemplateViewModel.MoveNamingTemplateToken(from, to);
     }
 
     private void ReloadPluginContext()
     {
         DetachConfigFieldHandlers();
+
+        if (_activePlugin?.Manifest?.PluginId is { } prevPid)
+            PersistCurrentPluginUiToStores(prevPid);
 
         _activePlugin = ResolveActivePlugin();
         var plugin = _activePlugin;
@@ -699,6 +686,8 @@ public sealed class MainWindowViewModel : ObservableObject
         TargetFormats.Clear();
         ConfigFields.Clear();
         _visibleIfByFieldKey.Clear();
+        _visibleForInputExtensionsByFieldKey.Clear();
+        _visibleForTargetFormatsByFieldKey.Clear();
         _fieldBoolRelations.Clear();
         _baseLabelByFieldKey.Clear();
         _baseHelpByFieldKey.Clear();
@@ -706,16 +695,12 @@ public sealed class MainWindowViewModel : ObservableObject
         if (!HasActivePlugin)
         {
             SelectedTargetFormat = null;
-            return;
         }
-
+        else
+        {
         _allTargetFormatModels = plugin!.Manifest.SupportedTargetFormats ?? Array.Empty<TargetFormatModel>();
         TargetFormats.Clear();
-        foreach (var tf in _allTargetFormatModels)
-        {
-            TargetFormats.Add(new TargetFormatVm(tf.Id, _pluginI18n.T(plugin!, tf.DisplayNameKey, _hostI18n.Locale)));
-        }
-        SelectedTargetFormat = TargetFormats.FirstOrDefault();
+        SelectedTargetFormat = null;
 
         var schema = plugin!.Manifest.ConfigSchema;
         if (schema?.Sections is not null)
@@ -777,6 +762,15 @@ public sealed class MainWindowViewModel : ObservableObject
                     {
                         _visibleIfByFieldKey[field.Key] = field.VisibleIf;
                     }
+                    if (field.VisibleForInputExtensions is not null)
+                    {
+                        _visibleForInputExtensionsByFieldKey[field.Key] = field.VisibleForInputExtensions;
+                    }
+
+                    if (field.VisibleForTargetFormats is not null)
+                    {
+                        _visibleForTargetFormatsByFieldKey[field.Key] = field.VisibleForTargetFormats;
+                    }
 
                     ConfigFields.Add(vm);
                 }
@@ -788,10 +782,35 @@ public sealed class MainWindowViewModel : ObservableObject
             _fieldBoolRelations.AddRange(rels);
         }
 
+        // 与 RefreshTargetFormatsByVisibility 使用同一套过滤规则，避免先填充 manifest 全量项再过滤时
+        // 用户能选到当前输入下无效的格式，随后重建列表覆盖选中项导致 ComboBox 折叠态空白。
+        _isReevaluatingUiRules = true;
+        try
+        {
+            RefreshTargetFormatsByVisibility();
+        }
+        finally
+        {
+            _isReevaluatingUiRules = false;
+        }
+
         _loadingUserSettings = true;
         try
         {
             RestorePluginUiFromSettings();
+        }
+        finally
+        {
+            _loadingUserSettings = false;
+        }
+
+        } // else HasActivePlugin
+
+        // 全局命名模板与自定义标签：与插件无关，必须在无插件时也能从 config 恢复并写回。
+        _loadingUserSettings = true;
+        try
+        {
+            RestoreGlobalUiFromSettings();
         }
         finally
         {
@@ -807,45 +826,42 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void OnVmPersistablePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_loadingUserSettings)
-        {
-            return;
-        }
-
-        if (e.PropertyName is null || !PersistableVmProps.Contains(e.PropertyName))
-        {
-            return;
-        }
-
-        ScheduleSaveUserSettings();
+        // 不再需要实时保存，在应用关闭时统一保存
+        // 这里可以添加一些即时反馈，比如状态栏提示
     }
 
     private void ScheduleSaveUserSettings()
     {
-        if (_loadingUserSettings)
-        {
-            return;
-        }
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            _saveUserSettingsTimer ??= new DispatcherTimer(
-                TimeSpan.FromMilliseconds(500),
-                DispatcherPriority.Background,
-                (_, _) => FlushSaveUserSettings());
-            _saveUserSettingsTimer.Stop();
-            _saveUserSettingsTimer.Start();
-        }, DispatcherPriority.Background);
+        // 不再需要定时器，在应用关闭时统一保存
+        // 这里可以添加一些即时反馈，比如状态栏提示
     }
 
-    public void SaveUserSettingsNow() => FlushSaveUserSettings();
+    public void SaveUserSettingsNow() => SaveSettings();
 
-    private void FlushSaveUserSettings()
+    public void SaveSettings()
     {
         try
         {
-            _saveUserSettingsTimer?.Stop();
-            UserSettingsStore.Save(CaptureCurrentUserSettings());
+            // 从 UI 更新用户设置
+            UpdateUserSettingsFromUI();
+
+            // 更新设置字典
+            SettingManager.SetValue(_settings, "Locale", _userSettings.Locale);
+            SettingManager.SetValue(_settings, "OutputDir", _userSettings.OutputDir);
+            SettingManager.SetValue(_settings, "UseInputDirAsOutput", _userSettings.UseInputDirAsOutput);
+            SettingManager.SetValue(_settings, "NamingTemplate", _userSettings.NamingTemplate);
+            SettingManager.SetValue(_settings, "CustomToken1Text", _userSettings.CustomToken1Text);
+            SettingManager.SetValue(_settings, "CustomToken2Text", _userSettings.CustomToken2Text);
+            SettingManager.SetValue(_settings, "CustomToken3Text", _userSettings.CustomToken3Text);
+            SettingManager.SetValue(_settings, "EnableParallelProcessing", _userSettings.EnableParallelProcessing);
+            SettingManager.SetValue(_settings, "Parallelism", _userSettings.Parallelism);
+            SettingManager.SetValue(_settings, "KeepTemp", _userSettings.KeepTemp);
+            SettingManager.SetValue(_settings, "Plugins", _userSettings.Plugins);
+
+            SettingManager.SaveHostSettings(_settings);
+            
+            // 保存所有插件配置
+            SettingManager.SaveAllPluginSettings(_catalog, _pluginSettings);
         }
         catch
         {
@@ -853,43 +869,75 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private UserSettingsFile CaptureCurrentUserSettings()
+    private void UpdateUserSettingsFromUI()
     {
+        // 从 UI 更新用户设置
         _userSettings.Locale = _hostI18n.Locale;
-        // Don't persist InputPaths (user's runtime selection).
-        _userSettings.InputPaths = null;
+        _userSettings.InputPaths = null; // 不保存输入路径
         _userSettings.OutputDir = _outputDir;
         _userSettings.UseInputDirAsOutput = _useInputDirAsOutput;
-        _userSettings.NamingTemplate = _namingTemplate;
+        _userSettings.NamingTemplate = _namingTemplateViewModel.NamingTemplate;
+
+        var (custom1, custom2, custom3) = _namingTemplateViewModel.GetCustomTokenTexts();
+        _userSettings.CustomToken1Text = custom1;
+        _userSettings.CustomToken2Text = custom2;
+        _userSettings.CustomToken3Text = custom3;
+
         _userSettings.EnableParallelProcessing = _enableParallelProcessing;
         _userSettings.Parallelism = _parallelism;
         _userSettings.KeepTemp = _keepTemp;
 
         if (_activePlugin?.Manifest?.PluginId is { } pid)
+            PersistCurrentPluginUiToStores(pid);
+    }
+
+    private PluginEntry? FindPluginEntry(string pluginId) =>
+        _catalog.Plugins.FirstOrDefault(e =>
+            string.Equals(e.Manifest.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+
+    private Dictionary<string, SettingItem> LoadPluginSettingsDictForPluginId(string pluginId)
+    {
+        var entry = FindPluginEntry(pluginId);
+        return entry is not null
+            ? SettingManager.LoadPluginSettingsFromPluginDirectory(entry.PluginDir)
+            : SettingManager.LoadPluginSettings(pluginId);
+    }
+
+    /// <summary>
+    /// 将当前 <see cref="ConfigFields"/> / <see cref="SelectedTargetFormat"/> 写入 <see cref="_pluginSettings"/> 与 <see cref="_userSettings.Plugins"/>，
+    /// 与即将写盘的 <c>config.json</c> 一致。切换插件或关闭窗口前必须调用，否则会丢失未写盘的 UI 修改。
+    /// </summary>
+    private void PersistCurrentPluginUiToStores(string pid)
+    {
+        _userSettings.Plugins ??= new Dictionary<string, PluginUserSettings>(StringComparer.OrdinalIgnoreCase);
+        if (!_userSettings.Plugins.TryGetValue(pid, out var plug))
         {
-            if (!_userSettings.Plugins.TryGetValue(pid, out var plug))
-            {
-                plug = new PluginUserSettings();
-                _userSettings.Plugins[pid] = plug;
-            }
-
-            plug.TargetFormatId = SelectedTargetFormat?.Id;
-            plug.Fields.Clear();
-            foreach (var f in ConfigFields)
-            {
-                var v = f.GetValue();
-                plug.Fields[f.Key] = v switch
-                {
-                    null => "",
-                    bool b => b ? "true" : "false",
-                    _ => v.ToString() ?? ""
-                };
-            }
-
-            ApplyFieldPersistOverridesToSavedPluginFields(plug);
+            plug = new PluginUserSettings();
+            _userSettings.Plugins[pid] = plug;
         }
 
-        return _userSettings;
+        if (!_pluginSettings.TryGetValue(pid, out var pluginConfig))
+        {
+            pluginConfig = LoadPluginSettingsDictForPluginId(pid);
+            _pluginSettings[pid] = pluginConfig;
+        }
+
+        SettingManager.SetValue(pluginConfig, "TargetFormatId", SelectedTargetFormat?.Id);
+
+        foreach (var f in ConfigFields)
+        {
+            var v = f.GetValue();
+            var value = v switch
+            {
+                null => "",
+                bool b => b ? "true" : "false",
+                _ => v.ToString() ?? ""
+            };
+            SettingManager.SetValue(pluginConfig, f.Key, value);
+            plug.Fields[f.Key] = value;
+        }
+
+        ApplyFieldPersistOverridesToSavedPluginFields(pluginConfig, plug);
     }
 
     private void RestorePluginUiFromSettings()
@@ -899,39 +947,72 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        if (!_userSettings.Plugins.TryGetValue(pid, out var ps))
+        // 确保插件配置已加载
+        if (!_pluginSettings.TryGetValue(pid, out var pluginConfig))
         {
-            return;
+            var settings = LoadPluginSettingsDictForPluginId(pid);
+            _pluginSettings[pid] = settings;
+            pluginConfig = settings;
         }
 
-        if (!string.IsNullOrWhiteSpace(ps.TargetFormatId))
+        // 从插件配置文件读取目标格式
+        var targetFormatId = SettingManager.GetValue<string>(pluginConfig, "TargetFormatId");
+        if (!string.IsNullOrWhiteSpace(targetFormatId))
         {
             var tf = TargetFormats.FirstOrDefault(t =>
-                string.Equals(t.Id, ps.TargetFormatId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(t.Id, targetFormatId, StringComparison.OrdinalIgnoreCase));
             if (tf is not null)
             {
                 SelectedTargetFormat = tf;
             }
         }
 
+        // 从插件配置文件读取各字段值（须用 GetPluginFieldPersistedString：显式空串 "" 也要恢复，不能用 GetValue<string>）
         foreach (var field in ConfigFields)
         {
-            if (!ps.Fields.TryGetValue(field.Key, out var raw))
-            {
-                continue;
-            }
-
-            ApplyFieldString(field, raw);
+            var value = SettingManager.GetPluginFieldPersistedString(pluginConfig, field.Key);
+            if (value is not null)
+                ApplyFieldString(field, value);
         }
 
         ApplyFieldPersistOverridesAfterRestore();
     }
 
+    private void ApplyCustomTokensFromUserSettingsToUi()
+    {
+        var c1 = _userSettings.CustomToken1Text ?? "";
+        var c2 = _userSettings.CustomToken2Text ?? "";
+        var c3 = _userSettings.CustomToken3Text ?? "";
+        _customToken1Text = c1;
+        _customToken2Text = c2;
+        _customToken3Text = c3;
+        _namingTemplateViewModel.SetCustomTokenTexts(c1, c2, c3);
+        RaisePropertyChanged(nameof(CustomToken1Text));
+        RaisePropertyChanged(nameof(CustomToken2Text));
+        RaisePropertyChanged(nameof(CustomToken3Text));
+        RaiseCustomTokenChipCandidateTextsChanged();
+    }
+
+    private void RestoreGlobalUiFromSettings()
+    {
+        // 与插件无关的全局项：插件列表变化时会再次调用本方法，需与 _userSettings 保持一致
+        OutputDir = ExpandOutputPath(_userSettings.OutputDir ?? "");
+        UseInputDirAsOutput = _userSettings.UseInputDirAsOutput ?? true;
+
+        ApplyCustomTokensFromUserSettingsToUi();
+
+        if (_userSettings.NamingTemplate is not null)
+        {
+            _namingTemplateViewModel.NamingTemplate = _userSettings.NamingTemplate.Trim();
+        }
+    }
+
     /// <summary>
     /// When manifest <c>configSchema.fieldPersistOverrides</c> rules match current UI, overwrite keys in the
     /// snapshot written to disk so the next launch restores folded defaults, without changing in-session VMs here.
+    /// 同时写入 <paramref name="pluginConfig"/>（<c>plugins/&lt;pluginId&gt;/config.json</c>）与 Host 根 <c>config.json</c> 中的 <c>Plugins</c> 快照（<paramref name="plug"/>）。
     /// </summary>
-    private void ApplyFieldPersistOverridesToSavedPluginFields(PluginUserSettings plug)
+    private void ApplyFieldPersistOverridesToSavedPluginFields(Dictionary<string, SettingItem> pluginConfig, PluginUserSettings plug)
     {
         var schema = _activePlugin?.Manifest?.ConfigSchema;
         if (schema?.FieldPersistOverrides is not { Length: > 0 } rules)
@@ -953,7 +1034,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
             foreach (var kv in rule.Fields)
             {
-                plug.Fields[kv.Key] = JsonElementToPersistString(kv.Value);
+                var s = JsonElementToPersistString(kv.Value);
+                plug.Fields[kv.Key] = s;
+                SettingManager.SetValue(pluginConfig, kv.Key, s);
             }
         }
     }
@@ -1235,30 +1318,53 @@ public sealed class MainWindowViewModel : ObservableObject
                 }
             }
 
-            // 2) show/hide fields via visibleIf
+            // 2) filter target formats first so SelectedTargetFormat is stable for visibleForTargetFormats
+            RefreshTargetFormatsByVisibility();
+
+            // 3) show/hide fields via visibleIf, visibleForInputExtensions, visibleForTargetFormats
+            var inputExt = InputFiles.FirstOrDefault()?.FullPath is { } p
+                ? Path.GetExtension(p).TrimStart('.').ToLowerInvariant()
+                : null;
+
+            var selectedTargetId = SelectedTargetFormat?.Id;
+
             foreach (var field in ConfigFields)
             {
+                var show = true;
+
                 if (_visibleIfByFieldKey.TryGetValue(field.Key, out var vIf) && vIf is not null)
                 {
-                    var show = false;
+                    show = false;
                     if (TryGetCheckboxValue(vIf.FieldKey, out var controllingValue))
                     {
                         show = controllingValue == vIf.Expected;
                     }
-                    field.IsVisible = show;
                 }
-                else
+
+                if (show && _visibleForInputExtensionsByFieldKey.TryGetValue(field.Key, out var exts) && exts is { Length: > 0 })
                 {
-                    field.IsVisible = true;
+                    if (string.IsNullOrEmpty(inputExt) ||
+                        !exts.Any(e => string.Equals(e, inputExt, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        show = false;
+                    }
                 }
+
+                if (show && _visibleForTargetFormatsByFieldKey.TryGetValue(field.Key, out var tfIds) && tfIds is { Length: > 0 })
+                {
+                    if (string.IsNullOrWhiteSpace(selectedTargetId) ||
+                        !tfIds.Any(t => string.Equals(t, selectedTargetId, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        show = false;
+                    }
+                }
+
+                field.IsVisible = show;
             }
 
-            // 3) target-size unit conversion + dynamic labels
+            // 4) target-size unit conversion + dynamic labels
             ApplyTargetSizeUnitConversionIfNeeded();
             UpdateTargetSizeLabels();
-
-            // 4) filter target formats via visibleIf
-            RefreshTargetFormatsByVisibility();
         }
         finally
         {
@@ -1269,15 +1375,30 @@ public sealed class MainWindowViewModel : ObservableObject
     private void RefreshTargetFormatsByVisibility()
     {
         var candidates = new List<TargetFormatVm>();
+        var prevSelectedId = SelectedTargetFormat?.Id;
+
+        var inputExt = InputFiles.FirstOrDefault()?.FullPath is { } p
+            ? Path.GetExtension(p).TrimStart('.').ToLowerInvariant()
+            : null;
 
         foreach (var tf in _allTargetFormatModels)
         {
             var visible = true;
-                if (tf.VisibleIf is not null)
+
+            if (tf.InputExtensions is { Length: > 0 })
+            {
+                if (string.IsNullOrEmpty(inputExt) ||
+                    !tf.InputExtensions.Any(e => string.Equals(e, inputExt, StringComparison.OrdinalIgnoreCase)))
+                {
+                    visible = false;
+                }
+            }
+
+            if (visible && tf.VisibleIf is not null)
             {
                 if (TryGetCheckboxValue(tf.VisibleIf.FieldKey, out var controllingValue))
                 {
-                        visible = controllingValue == tf.VisibleIf.Expected;
+                    visible = controllingValue == tf.VisibleIf.Expected;
                 }
                 else
                 {
@@ -1309,11 +1430,14 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        if (SelectedTargetFormat is null ||
-            !TargetFormats.Any(t => string.Equals(t.Id, SelectedTargetFormat.Id, StringComparison.OrdinalIgnoreCase)))
+        TargetFormatVm? next = null;
+        if (!string.IsNullOrWhiteSpace(prevSelectedId))
         {
-            SelectedTargetFormat = TargetFormats.First();
+            next = TargetFormats.FirstOrDefault(t =>
+                string.Equals(t.Id, prevSelectedId, StringComparison.OrdinalIgnoreCase));
         }
+
+        SelectedTargetFormat = next ?? TargetFormats.First();
     }
 
     private void DetachConfigFieldHandlers()
@@ -1333,6 +1457,26 @@ public sealed class MainWindowViewModel : ObservableObject
         _configFieldHandlers.Clear();
     }
 
+    private static IEnumerable<string> GetAllSupportedExtensions(PluginCatalog catalog)
+    {
+        var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var plugin in catalog.Plugins)
+        {
+            if (plugin.Manifest.SupportedInputExtensions is { } exts)
+            {
+                foreach (var ext in exts)
+                {
+                    var normalized = ext.Trim().ToLowerInvariant();
+                    if (!string.IsNullOrEmpty(normalized))
+                    {
+                        extensions.Add(normalized);
+                    }
+                }
+            }
+        }
+        return extensions;
+    }
+
     private PluginEntry? ResolveActivePlugin()
     {
         var firstInput = InputFiles.FirstOrDefault()?.FullPath;
@@ -1341,7 +1485,7 @@ public sealed class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        return PluginRouter.RouteByInputPath(_catalog, firstInput) ?? _catalog.Plugins.FirstOrDefault();
+        return PluginRouter.RouteByInputPath(_catalog, firstInput);
     }
 
     private bool HasAnyInputPaths() => InputFiles.Count > 0;
@@ -1822,21 +1966,6 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private async Task BrowseInputAsync()
-    {
-        if (TopLevel?.StorageProvider is null)
-        {
-            return;
-        }
-
-        var files = await TopLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            AllowMultiple = true
-        });
-
-        AddInputPaths(files.Select(f => f.Path.LocalPath));
-    }
-
     private async Task BrowseOutputDirAsync()
     {
         if (TopLevel?.StorageProvider is null)
@@ -1919,31 +2048,20 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void ReloadCatalog()
     {
-        _catalog = PluginCatalog.LoadFromOutput(AppContext.BaseDirectory);
-        AppServices.Plugins = _catalog;
+        AppServices.ReloadPlugins(AppContext.BaseDirectory);
+        _catalog = AppServices.Plugins;
         HasPlugins = _catalog.Plugins.Count > 0;
         UpdateConfigPlaceholder();
+
+        var allSupportedExtensions = GetAllSupportedExtensions(_catalog);
+        _inputFileViewModel.UpdateSupportedExtensions(allSupportedExtensions);
 
         ReloadPluginContext();
     }
 
     public void AddInputPaths(IEnumerable<string> paths)
     {
-        foreach (var p in paths)
-        {
-            var trimmed = (p ?? "").Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
-            {
-                continue;
-            }
-
-            if (InputFiles.Any(x => string.Equals(x.FullPath, trimmed, StringComparison.OrdinalIgnoreCase)))
-            {
-                continue;
-            }
-
-            InputFiles.Add(new InputFileItemVm(trimmed, RemoveInputFile));
-        }
+        _inputFileViewModel.AddInputPaths(paths);
     }
 
     private void UpdateBatch(int completed, int total, string stage)
@@ -1956,16 +2074,15 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private string MoveToFinalOutput(string tempOutputPath, string inputPath, string targetExt, int index)
     {
-        var outputDir = UseInputDirAsOutput
+        var outputDirRaw = UseInputDirAsOutput
             ? (Path.GetDirectoryName(inputPath) ?? "")
             : (OutputDir ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(outputDir))
-        {
-            outputDir = Path.Combine(AppContext.BaseDirectory, "output");
-        }
+        var outputDir = string.IsNullOrWhiteSpace(outputDirRaw)
+            ? Path.Combine(AppContext.BaseDirectory, "output")
+            : ExpandOutputPath(outputDirRaw);
         Directory.CreateDirectory(outputDir);
 
-        var template = (NamingTemplate ?? "{base}").Trim();
+        var template = (NamingTemplate ?? "").Trim();
         if (string.IsNullOrWhiteSpace(template))
         {
             template = "{base}";
@@ -1973,12 +2090,16 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var baseName = Path.GetFileNameWithoutExtension(inputPath);
         var now = DateTime.Now;
+        var (custom1, custom2, custom3) = _namingTemplateViewModel.GetCustomTokenTexts();
         var fileName = template
             .Replace("{base}", baseName, StringComparison.OrdinalIgnoreCase)
             .Replace("{ext}", targetExt, StringComparison.OrdinalIgnoreCase)
             .Replace("{index}", index.ToString(), StringComparison.OrdinalIgnoreCase)
             .Replace("{timeYmd}", now.ToString("yyyy-MM-dd"), StringComparison.OrdinalIgnoreCase)
-            .Replace("{timeHms}", now.ToString("HH-mm-ss"), StringComparison.OrdinalIgnoreCase);
+            .Replace("{timeHms}", now.ToString("HH-mm-ss"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{custom1}", custom1, StringComparison.OrdinalIgnoreCase)
+            .Replace("{custom2}", custom2, StringComparison.OrdinalIgnoreCase)
+            .Replace("{custom3}", custom3, StringComparison.OrdinalIgnoreCase);
 
         fileName = fileName.TrimEnd('.');
         var expectedSuffix = "." + targetExt;
@@ -2167,10 +2288,34 @@ public sealed class MainWindowViewModel : ObservableObject
 
         return msg;
     }
+
+    /// <summary>展开 OutputDir 中的 %USERPROFILE% 等；在无法展开时（如 Linux 无 USERPROFILE）回退到「文档/convertool/output」。</summary>
+    private static string ExpandOutputPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return "";
+        var t = path.Trim();
+        var expanded = Environment.ExpandEnvironmentVariables(t);
+        if (expanded.Contains('%') && t.Contains("%USERPROFILE%", StringComparison.OrdinalIgnoreCase))
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "convertool", "output");
+        return expanded;
+    }
 }
 
-public sealed record TargetFormatVm(string Id, string Text)
+/// <summary>
+/// 与 manifest <c>supportedTargetFormats</c> 中一项对应：<see cref="Id"/> 为可转换格式 id；
+/// <see cref="Text"/> 为 <c>displayNameKey</c> 在当前语言下的展示文案。
+/// </summary>
+public sealed class TargetFormatVm
 {
+    public string Id { get; }
+    public string Text { get; }
+
+    public TargetFormatVm(string id, string text)
+    {
+        Id = id;
+        Text = text;
+    }
+
     public override string ToString() => Text;
 }
 

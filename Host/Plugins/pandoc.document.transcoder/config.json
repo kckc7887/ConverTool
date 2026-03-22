@@ -1,0 +1,9 @@
+{
+  "settings": [
+    {
+      "key": "TargetFormatId",
+      "value": "",
+      "default": ""
+    }
+  ]
+}

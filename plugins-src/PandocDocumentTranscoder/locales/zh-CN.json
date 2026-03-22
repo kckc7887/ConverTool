@@ -1,0 +1,25 @@
+{
+  "strings": {
+    "plugin/pandoc.document.transcoder/title": "文档转换器",
+    "plugin/pandoc.document.transcoder/description": "支持 Markdown、Word、HTML、EPUB 等多种文档格式互转；PDF 转图使用内置 DtronixPdf（无需 Ghostscript，非 Pandoc）。",
+    "plugin/pandoc.document.transcoder/target/docx": "DOCX（推荐，兼容性好）",
+    "plugin/pandoc.document.transcoder/target/doc": "DOC（兼容旧版 Office）",
+    "plugin/pandoc.document.transcoder/target/odt": "ODT（LibreOffice 格式）",
+    "plugin/pandoc.document.transcoder/target/html": "HTML（网页格式）",
+    "plugin/pandoc.document.transcoder/target/epub": "EPUB（电子书格式）",
+    "plugin/pandoc.document.transcoder/target/md": "Markdown（轻量标记）",
+    "plugin/pandoc.document.transcoder/target/txt": "TXT（纯文本）",
+    "plugin/pandoc.document.transcoder/target/rst": "RST（技术文档）",
+    "plugin/pandoc.document.transcoder/target/typst": "Typst（现代排版）",
+    "plugin/pandoc.document.transcoder/target/pdf": "PDF（打印推荐）",
+    "plugin/pandoc.document.transcoder/target/pngLong": "PNG（长图）",
+    "plugin/pandoc.document.transcoder/target/jpgLong": "JPG（长图）",
+    "plugin/pandoc.document.transcoder/target/zip": "ZIP（多页打包）",
+    "plugin/pandoc.document.transcoder/section/pdfImageOutput": "PDF 转图片设置",
+    "plugin/pandoc.document.transcoder/section/pdfImageOutputDesc": "分辨率对所有 PDF 转图目标生效。目标格式为 ZIP 时，可指定压缩包内每页为 PNG 或 JPG。",
+    "plugin/pandoc.document.transcoder/field/dpi": "分辨率 (DPI)",
+    "plugin/pandoc.document.transcoder/field/zipImageFormat": "ZIP 内图片格式",
+    "plugin/pandoc.document.transcoder/zipInner/png": "PNG",
+    "plugin/pandoc.document.transcoder/zipInner/jpg": "JPG"
+  }
+}

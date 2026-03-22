@@ -62,7 +62,7 @@ public static class UserSettingsStore
 
 public sealed class UserSettingsFile
 {
-    public int Version { get; set; } = 1;
+    public int? Version { get; set; }
 
     public string? Locale { get; set; }
 
@@ -70,19 +70,22 @@ public sealed class UserSettingsFile
 
     public string? OutputDir { get; set; }
 
-    /// <summary>Null when key missing in older JSON — treat as true (output next to input).</summary>
     public bool? UseInputDirAsOutput { get; set; }
 
     public string? NamingTemplate { get; set; }
 
-    public bool EnableParallelProcessing { get; set; }
+    public string? CustomToken1Text { get; set; }
+    public string? CustomToken2Text { get; set; }
+    public string? CustomToken3Text { get; set; }
 
-    public int Parallelism { get; set; } = 2;
+    public bool? EnableParallelProcessing { get; set; }
 
-    public bool KeepTemp { get; set; }
+    public int? Parallelism { get; set; }
+
+    public bool? KeepTemp { get; set; }
 
     /// <summary>pluginId -> saved UI state</summary>
-    public Dictionary<string, PluginUserSettings> Plugins { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, PluginUserSettings>? Plugins { get; set; }
 }
 
 public sealed class PluginUserSettings

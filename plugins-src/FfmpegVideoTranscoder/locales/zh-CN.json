@@ -1,26 +1,52 @@
 {
   "strings": {
-    "plugin/ffmpeg.video.transcoder/title": "FFmpeg 视频转码器",
-    "plugin/ffmpeg.video.transcoder/description": "使用 FFmpeg 进行视频转码（CRF + 硬件加速）。",
+    "plugin/ffmpeg.video.transcoder/title": "视频转换器",
+    "plugin/ffmpeg.video.transcoder/description": "将视频转换为其他格式，可调整清晰度和画质。",
 
-    "plugin/ffmpeg.video.transcoder/section/basic": "基础",
+    "plugin/ffmpeg.video.transcoder/section/advanced": "更多选项",
 
-    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4（通用兼容）",
-    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV（封装灵活）",
-    "plugin/ffmpeg.video.transcoder/target/mov": "MOV（苹果生态）",
-    "plugin/ffmpeg.video.transcoder/target/webm": "WebM（网页优先）",
-    "plugin/ffmpeg.video.transcoder/target/avi": "AVI（老设备兼容）",
+    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4（推荐，兼容性最好）",
+    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV（适合保存多音轨）",
+    "plugin/ffmpeg.video.transcoder/target/mov": "MOV（适合苹果设备）",
+    "plugin/ffmpeg.video.transcoder/target/webm": "WebM（适合网页使用）",
+    "plugin/ffmpeg.video.transcoder/target/avi": "AVI（适合老设备播放）",
+    "plugin/ffmpeg.video.transcoder/target/flv": "FLV（Flash视频）",
+    "plugin/ffmpeg.video.transcoder/target/m4v": "M4V（苹果视频）",
+    "plugin/ffmpeg.video.transcoder/target/ts": "TS（传输流）",
+    "plugin/ffmpeg.video.transcoder/target/mts": "MTS（AVCHD视频）",
+    "plugin/ffmpeg.video.transcoder/target/m2ts": "M2TS（蓝光视频）",
+    "plugin/ffmpeg.video.transcoder/target/ogg": "OGG（Ogg视频）",
+    "plugin/ffmpeg.video.transcoder/target/ogv": "OGV（Ogg视频）",
 
-    "plugin/ffmpeg.video.transcoder/field/crf/label": "CRF / 质量",
-    "plugin/ffmpeg.video.transcoder/field/crf/help": "数值越小质量越高、体积越大。CPU/x264 常用 18-28。GPU 编码时会把 CRF 映射到最接近的质量参数。",
+    "plugin/ffmpeg.video.transcoder/field/enableAdvancedConfig/label": "调整画质和清晰度",
 
-    "plugin/ffmpeg.video.transcoder/field/hw/label": "硬件加速",
-    "plugin/ffmpeg.video.transcoder/field/hw/help": "选择编码后端，需要对应显卡与带相应编码器的 FFmpeg 构建。",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "CPU（libx264）",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA（NVENC）",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD（AMF）",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel（QSV）"
+    "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/label": "记住我的设置",
+    "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/help": "勾选后，下次使用时保留这些设置；不勾选则下次自动恢复默认。",
+
+    "plugin/ffmpeg.video.transcoder/field/resolution/label": "清晰度",
+    "plugin/ffmpeg.video.transcoder/field/resolution/help": "选择视频的画面大小。清晰度越高，画面越清晰，文件也越大。",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/keep": "保持原样",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/4k": "4K 超高清",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/1080p": "1080P 全高清",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/720p": "720P 高清",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/480p": "480P 标清",
+
+    "plugin/ffmpeg.video.transcoder/field/framerate/label": "流畅度",
+    "plugin/ffmpeg.video.transcoder/field/framerate/help": "每秒画面帧数。数值越大越流畅，文件也越大。",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/keep": "保持原样",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/60": "60 帧（非常流畅）",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/30": "30 帧（流畅）",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/24": "24 帧（电影效果）",
+
+    "plugin/ffmpeg.video.transcoder/field/crf/label": "画质",
+    "plugin/ffmpeg.video.transcoder/field/crf/help": "数值越小画质越高、文件越大。建议设置在 18-28 之间。",
+
+    "plugin/ffmpeg.video.transcoder/field/hw/label": "加速方式",
+    "plugin/ffmpeg.video.transcoder/field/hw/help": "选择处理速度。自动检测会使用显卡加速，速度更快。",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/auto": "自动（推荐）",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "仅使用处理器",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA 显卡加速",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD 显卡加速",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel 显卡加速"
   }
 }
-
-

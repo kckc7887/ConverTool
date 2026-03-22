@@ -50,12 +50,6 @@ New-Item -ItemType Directory -Force $iconDstDir | Out-Null
 if (-not (Test-Path $iconSrc)) { throw "Missing app icon: $iconSrc" }
 Copy-Item -Force $iconSrc $iconDst
 
-$uninstallPng = Join-Path $repoRoot "installer\Assets\uninstall.png"
-$uninstallIco = Join-Path $repoRoot "installer\Assets\uninstall.ico"
-$genUninstallIco = Join-Path $repoRoot "installer\scripts\generate-uninstall-ico.py"
-if (-not (Test-Path $uninstallPng)) { throw "Missing uninstall art: $uninstallPng" }
-python $genUninstallIco $uninstallPng $uninstallIco
-
 Write-Host "== Compile installer =="
 $iscc = Resolve-IsccPath
 if (-not $iscc) {

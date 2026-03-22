@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Host.Services;
 using System;
 
 namespace Host;
@@ -14,7 +15,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        AppServices.I18n.Initialize(AppContext.BaseDirectory);
+        ServiceLocator.Initialize(AppContext.BaseDirectory);
+        ServiceLocator.GetService<I18nService>().Initialize(AppContext.BaseDirectory);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {

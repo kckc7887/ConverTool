@@ -115,8 +115,56 @@
                                 <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"
                                             IsVisible="{Binding HasActivePlugin}">
                                     <TextBlock VerticalAlignment="Center" Text="{Binding TargetFormatLabel}" />
-                                    <ComboBox Width="200" ItemsSource="{Binding TargetFormats}"
-                                              SelectedItem="{Binding SelectedTargetFormat}" />
+                                    <!-- Flyout+ListBox：折叠态显示 displayNameKey 文案；下拉项同行左文案、右 id。 -->
+                                    <Button x:Name="TargetFormatChooserButton"
+                                            MinWidth="200"
+                                            HorizontalAlignment="Left"
+                                            HorizontalContentAlignment="Stretch"
+                                            Padding="10,6"
+                                            Classes="secondary"
+                                            IsEnabled="{Binding HasTargetFormats}">
+                                        <Button.Flyout>
+                                            <Flyout Placement="BottomEdgeAlignedLeft">
+                                                <ListBox Width="280"
+                                                         MaxHeight="320"
+                                                         ItemsSource="{Binding TargetFormats}"
+                                                         SelectedItem="{Binding SelectedTargetFormat, Mode=TwoWay}"
+                                                         KeyDown="OnTargetFormatFlyoutListKeyDown"
+                                                         PointerReleased="OnTargetFormatFlyoutListPointerReleased">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:TargetFormatVm">
+                                                            <Grid Margin="0,4"
+                                                                  ColumnDefinitions="*,Auto"
+                                                                  ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Grid.Column="0"
+                                                                           VerticalAlignment="Center"
+                                                                           Text="{Binding Text}"
+                                                                           TextWrapping="Wrap" />
+                                                                <TextBlock Grid.Column="1"
+                                                                           VerticalAlignment="Center"
+                                                                           Opacity="0.65"
+                                                                           FontSize="11"
+                                                                           Text="{Binding Id}" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       HorizontalAlignment="Left"
+                                                       Text="{Binding SelectedTargetFormatDisplayText}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,0,0"
+                                                       FontSize="12"
+                                                       Opacity="0.75"
+                                                       Text="▾" />
+                                        </Grid>
+                                    </Button>
                                 </StackPanel>
                                 <ItemsControl ItemsSource="{Binding ConfigFields}" IsVisible="{Binding HasActivePlugin}">
                                     <ItemsControl.ItemTemplate>
@@ -287,7 +335,44 @@
                                                                IsChecked="{Binding HasNamingTemplateTimeHmsToken, Mode=OneWay}"
                                                                Command="{Binding AddNamingTemplateTokenCommand}"
                                                                CommandParameter="{Binding NamingTemplateTimeHmsCandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateCustom1CandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateCustom1Token, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateCustom1CandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateCustom2CandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateCustom2Token, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateCustom2CandidateValue}" />
+                                                <ToggleButton Content="{Binding NamingTemplateCustom3CandidateText}"
+                                                               Classes="tag-chip"
+                                                               MinHeight="30"
+                                                               Padding="12,6"
+                                                               IsChecked="{Binding HasNamingTemplateCustom3Token, Mode=OneWay}"
+                                                               Command="{Binding AddNamingTemplateTokenCommand}"
+                                                               CommandParameter="{Binding NamingTemplateCustom3CandidateValue}" />
                                             </WrapPanel>
+                                            <!-- Custom label name inputs (i18n via VM) -->
+                                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                                                <TextBlock VerticalAlignment="Center" Opacity="0.7" Text="{Binding NamingTemplateCustomRowLabel}" />
+                                                <TextBox Width="80"
+                                                         Text="{Binding CustomToken1Text, Mode=TwoWay}"
+                                                         Watermark="{Binding CustomToken1Watermark}"
+                                                         FontSize="12" />
+                                                <TextBox Width="80"
+                                                         Text="{Binding CustomToken2Text, Mode=TwoWay}"
+                                                         Watermark="{Binding CustomToken2Watermark}"
+                                                         FontSize="12" />
+                                                <TextBox Width="80"
+                                                         Text="{Binding CustomToken3Text, Mode=TwoWay}"
+                                                         Watermark="{Binding CustomToken3Watermark}"
+                                                         FontSize="12" />
+                                            </StackPanel>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
                                                     VerticalAlignment="Center"

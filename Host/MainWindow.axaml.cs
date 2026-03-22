@@ -61,6 +61,61 @@ public partial class MainWindow : Window
         tb.SelectionEnd = text.Length;
     }
 
+    private void OnTargetFormatFlyoutListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter && e.Key != Key.Space)
+        {
+            return;
+        }
+
+        if (this.FindControl<Button>("TargetFormatChooserButton") is not { Flyout: { } flyout })
+        {
+            return;
+        }
+
+        flyout.Hide();
+    }
+
+    private void OnTargetFormatFlyoutListPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (sender is not ListBox)
+        {
+            return;
+        }
+
+        if (e.Source is not Interactive interactive)
+        {
+            return;
+        }
+
+        if (FindAncestor<ListBoxItem>(interactive) is null)
+        {
+            return;
+        }
+
+        if (this.FindControl<Button>("TargetFormatChooserButton") is not { Flyout: { } flyout })
+        {
+            return;
+        }
+
+        flyout.Hide();
+    }
+
+    private static T? FindAncestor<T>(Interactive? interactive) where T : Interactive
+    {
+        while (interactive is not null)
+        {
+            if (interactive is T match)
+            {
+                return match;
+            }
+
+            interactive = interactive.Parent as Interactive;
+        }
+
+        return null;
+    }
+
     private void OnInputDragOver(object? sender, DragEventArgs e)
     {
         if (e.DataTransfer.Contains(DataFormat.File))

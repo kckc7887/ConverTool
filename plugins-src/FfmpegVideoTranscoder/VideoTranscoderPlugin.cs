@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -17,12 +15,22 @@ namespace FfmpegVideoTranscoder;
 public sealed class VideoTranscoderPlugin : IConverterPlugin
 {
     private static readonly SemaphoreSlim FfmpegEnsureGate = new(1, 1);
+    private static string? _cachedHardwareEncoder;
+    private static readonly object _hwCacheLock = new();
+
+    private static readonly Dictionary<string, (int width, int height)> ResolutionPresets = new()
+    {
+        { "4k", (3840, 2160) },
+        { "1080p", (1920, 1080) },
+        { "720p", (1280, 720) },
+        { "480p", (854, 480) }
+    };
 
     public PluginManifest GetManifest()
         => new PluginManifest(
             "ffmpeg.video.transcoder",
-            "0.1.0",
-            new[] { "mp4","mkv","mov","avi","webm","flv","wmv","m4v","ts","mts","m2ts","3gp","ogv" },
+            "1.1.0",
+            new[] { "mp4","mkv","mov","avi","webm","flv","wmv","m4v","ts","mts","m2ts","3gp","ogv","ogg" },
             new[]
             {
                 new TargetFormat("mp4", "plugin/ffmpeg.video.transcoder/target/mp4", ""),
@@ -30,6 +38,13 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
                 new TargetFormat("mov", "plugin/ffmpeg.video.transcoder/target/mov", ""),
                 new TargetFormat("webm", "plugin/ffmpeg.video.transcoder/target/webm", ""),
                 new TargetFormat("avi", "plugin/ffmpeg.video.transcoder/target/avi", ""),
+                new TargetFormat("flv", "plugin/ffmpeg.video.transcoder/target/flv", ""),
+                new TargetFormat("m4v", "plugin/ffmpeg.video.transcoder/target/m4v", ""),
+                new TargetFormat("ts", "plugin/ffmpeg.video.transcoder/target/ts", ""),
+                new TargetFormat("mts", "plugin/ffmpeg.video.transcoder/target/mts", ""),
+                new TargetFormat("m2ts", "plugin/ffmpeg.video.transcoder/target/m2ts", ""),
+                new TargetFormat("ogg", "plugin/ffmpeg.video.transcoder/target/ogg", ""),
+                new TargetFormat("ogv", "plugin/ffmpeg.video.transcoder/target/ogv", ""),
             },
             new ConfigSchema(Array.Empty<ConfigSection>()),
             new[] { "en-US", "zh-CN" },
@@ -47,9 +62,12 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         var ffmpeg = paths.FfmpegPath;
         var ffprobe = paths.FfprobePath;
 
-        var crf = ReadIntFromSelectedConfig(context.SelectedConfig, "crf", fallback: 23);
+        var enableAdvanced = ReadBoolFromSelectedConfig(context.SelectedConfig, "enableAdvancedConfig", fallback: false);
+        var crf = enableAdvanced ? ReadIntFromSelectedConfig(context.SelectedConfig, "crf", fallback: 23) : 23;
         crf = Math.Clamp(crf, 0, 51);
-        var hw = ReadStringFromSelectedConfig(context.SelectedConfig, "hw", fallback: "cpu");
+        var hw = enableAdvanced ? ReadStringFromSelectedConfig(context.SelectedConfig, "hw", fallback: "auto") : "auto";
+        var resolution = enableAdvanced ? ReadStringFromSelectedConfig(context.SelectedConfig, "resolution", fallback: "keep") : "keep";
+        var framerate = enableAdvanced ? ReadStringFromSelectedConfig(context.SelectedConfig, "framerate", fallback: "keep") : "keep";
 
         var inputPath = context.InputPath;
         if (!File.Exists(inputPath))
@@ -69,11 +87,11 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
 
         reporter.OnLog($"[ffmpeg] input={inputPath}");
         reporter.OnLog($"[ffmpeg] output={outputPath}");
-        reporter.OnLog($"[ffmpeg] hw={hw}, crf={crf}");
+        reporter.OnLog($"[ffmpeg] hw={hw}, crf={crf}, resolution={resolution}, framerate={framerate}");
 
         var durationSeconds = await TryGetDurationSecondsAsync(ffprobe, inputPath, reporter, cancellationToken);
 
-        var args = BuildFfmpegArgs(inputPath, outputPath, targetExt, hw, crf);
+        var args = BuildFfmpegArgs(inputPath, outputPath, targetExt, hw, crf, resolution, framerate, ffmpeg, reporter);
         reporter.OnLog("[ffmpeg] args: " + string.Join(" ", args.Select(QuoteIfNeeded)));
 
         reporter.OnProgress(new ProgressInfo(ProgressStage.Preparing, 100));
@@ -109,6 +127,18 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         return Path.GetDirectoryName(loc) ?? AppContext.BaseDirectory;
     }
 
+    private static bool ReadBoolFromSelectedConfig(IReadOnlyDictionary<string, object?> selectedConfig, string key, bool fallback)
+    {
+        if (!selectedConfig.TryGetValue(key, out var v) || v is null)
+        {
+            return fallback;
+        }
+
+        if (v is bool b) return b;
+        var s = v.ToString()?.Trim().ToLowerInvariant();
+        return s == "true";
+    }
+
     private static int ReadIntFromSelectedConfig(IReadOnlyDictionary<string, object?> selectedConfig, string key, int fallback)
     {
         if (!selectedConfig.TryGetValue(key, out var v) || v is null)
@@ -116,7 +146,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
             return fallback;
         }
 
-        // Host Range returns string (ValueText), but be defensive.
         if (v is int i) return i;
         if (v is long l) return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
         if (v is double d) return (int)Math.Round(d);
@@ -139,9 +168,17 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         return string.IsNullOrWhiteSpace(s) ? fallback : s;
     }
 
-    private static IReadOnlyList<string> BuildFfmpegArgs(string inputPath, string outputPath, string targetExt, string hw, int crf)
+    private static IReadOnlyList<string> BuildFfmpegArgs(
+        string inputPath,
+        string outputPath,
+        string targetExt,
+        string hw,
+        int crf,
+        string resolution,
+        string framerate,
+        string ffmpegPath,
+        IProgressReporter reporter)
     {
-        // Always overwrite inside temp dir; Host will move/rename to final.
         var args = new List<string>
         {
             "-hide_banner",
@@ -151,40 +188,67 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
             "-nostats"
         };
 
-        // Video encoder selection (simple mapping).
-        hw = (hw ?? "cpu").Trim().ToLowerInvariant();
-        switch (hw)
+        var actualHw = hw;
+        if (string.Equals(hw, "auto", StringComparison.OrdinalIgnoreCase))
         {
-            case "nvidia":
-                // NVENC quality is not CRF; map to cq (0 best) but users expect "lower is better".
-                // We'll invert into a usable range: cq ~ crf.
-                args.AddRange(new[] { "-c:v", "h264_nvenc", "-cq", crf.ToString(CultureInfo.InvariantCulture) });
-                break;
-            case "amd":
-                // AMF uses QP; map CRF directly.
-                args.AddRange(new[]
-                {
-                    "-c:v", "h264_amf",
-                    "-qp_i", crf.ToString(CultureInfo.InvariantCulture),
-                    "-qp_p", crf.ToString(CultureInfo.InvariantCulture),
-                    "-qp_b", crf.ToString(CultureInfo.InvariantCulture),
-                });
-                break;
-            case "intel":
-                // QSV uses global_quality (lower is better quality for some codecs; mapping is best-effort).
-                args.AddRange(new[] { "-c:v", "h264_qsv", "-global_quality", crf.ToString(CultureInfo.InvariantCulture) });
-                break;
-            case "cpu":
-            default:
-                args.AddRange(new[] { "-c:v", "libx264", "-crf", crf.ToString(CultureInfo.InvariantCulture), "-preset", "medium" });
-                break;
+            actualHw = GetCachedHardwareEncoder(ffmpegPath, reporter);
+            reporter.OnLog($"[ffmpeg] auto-detected hardware encoder: {actualHw}");
         }
 
-        // Audio: re-encode to AAC for broad container compatibility.
-        // (Copying can fail when container doesn't support source codec.)
-        args.AddRange(new[] { "-c:a", "aac", "-b:a", "192k" });
+        var videoFilters = new List<string>();
 
-        // Container tweaks for mp4.
+        if (!string.Equals(resolution, "keep", StringComparison.OrdinalIgnoreCase) &&
+            ResolutionPresets.TryGetValue(resolution, out var res))
+        {
+            videoFilters.Add($"scale={res.width}:-2");
+        }
+
+        if (!string.Equals(framerate, "keep", StringComparison.OrdinalIgnoreCase) &&
+            int.TryParse(framerate, out var fps) && fps > 0)
+        {
+            videoFilters.Add($"fps={fps}");
+        }
+
+        actualHw = (actualHw ?? "cpu").Trim().ToLowerInvariant();
+
+        if (targetExt is "ogg" or "ogv")
+        {
+            args.AddRange(new[] { "-c:v", "libtheora", "-q:v", Math.Clamp(crf, 0, 10).ToString(CultureInfo.InvariantCulture) });
+            args.AddRange(new[] { "-c:a", "libvorbis", "-q:a", "5" });
+        }
+        else
+        {
+            switch (actualHw)
+            {
+                case "nvidia":
+                    args.AddRange(new[] { "-c:v", "h264_nvenc", "-cq", crf.ToString(CultureInfo.InvariantCulture) });
+                    break;
+                case "amd":
+                    args.AddRange(new[]
+                    {
+                        "-c:v", "h264_amf",
+                        "-qp_i", crf.ToString(CultureInfo.InvariantCulture),
+                        "-qp_p", crf.ToString(CultureInfo.InvariantCulture),
+                        "-qp_b", crf.ToString(CultureInfo.InvariantCulture),
+                    });
+                    break;
+                case "intel":
+                    args.AddRange(new[] { "-c:v", "h264_qsv", "-global_quality", crf.ToString(CultureInfo.InvariantCulture) });
+                    break;
+                case "cpu":
+                default:
+                    args.AddRange(new[] { "-c:v", "libx264", "-crf", crf.ToString(CultureInfo.InvariantCulture), "-preset", "medium" });
+                    break;
+            }
+
+            if (videoFilters.Count > 0)
+            {
+                args.AddRange(new[] { "-vf", string.Join(",", videoFilters) });
+            }
+
+            args.AddRange(new[] { "-c:a", "aac", "-b:a", "192k" });
+        }
+
         if (string.Equals(targetExt, "mp4", StringComparison.OrdinalIgnoreCase))
         {
             args.AddRange(new[] { "-movflags", "+faststart" });
@@ -192,6 +256,73 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
 
         args.Add(outputPath);
         return args;
+    }
+
+    private static string GetCachedHardwareEncoder(string ffmpegPath, IProgressReporter reporter)
+    {
+        lock (_hwCacheLock)
+        {
+            if (!string.IsNullOrEmpty(_cachedHardwareEncoder))
+            {
+                return _cachedHardwareEncoder;
+            }
+        }
+
+        var encoder = DetectHardwareEncoder(ffmpegPath, reporter);
+
+        lock (_hwCacheLock)
+        {
+            _cachedHardwareEncoder = encoder;
+        }
+
+        return encoder;
+    }
+
+    private static string DetectHardwareEncoder(string ffmpegPath, IProgressReporter reporter)
+    {
+        try
+        {
+            using var p = new Process();
+            p.StartInfo = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                Arguments = "-encoders -hide_banner",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            p.Start();
+            var output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(5000);
+
+            if (output.Contains("h264_nvenc", StringComparison.OrdinalIgnoreCase))
+            {
+                reporter.OnLog("[ffmpeg] detected: NVIDIA NVENC available");
+                return "nvidia";
+            }
+
+            if (output.Contains("h264_qsv", StringComparison.OrdinalIgnoreCase))
+            {
+                reporter.OnLog("[ffmpeg] detected: Intel QSV available");
+                return "intel";
+            }
+
+            if (output.Contains("h264_amf", StringComparison.OrdinalIgnoreCase))
+            {
+                reporter.OnLog("[ffmpeg] detected: AMD AMF available");
+                return "amd";
+            }
+
+            reporter.OnLog("[ffmpeg] no hardware encoder detected, using CPU");
+            return "cpu";
+        }
+        catch (Exception ex)
+        {
+            reporter.OnLog($"[ffmpeg] hardware detection failed: {ex.Message}, falling back to CPU");
+            return "cpu";
+        }
     }
 
     private static async Task<(int exitCode, string stderrTail)> RunFfmpegWithProgressAsync(
@@ -205,8 +336,8 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         p.StartInfo = new ProcessStartInfo
         {
             FileName = ffmpegPath,
-            RedirectStandardOutput = true,  // progress
-            RedirectStandardError = true,   // logs
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -227,8 +358,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
                 stderrRing.Enqueue(e.Data);
             }
 
-            // Stream ffmpeg stderr into host UI log in real time.
-            // (ffmpeg typically writes progress/details to stderr.)
             reporter.OnLog("[ffmpeg] " + e.Data);
         };
 
@@ -240,7 +369,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
                 var line = await p.StandardOutput.ReadLineAsync().ConfigureAwait(false);
                 if (line is null) break;
 
-                // progress format: key=value
                 var idx = line.IndexOf('=');
                 if (idx <= 0) continue;
                 var key = line[..idx];
@@ -282,7 +410,7 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         }
         finally
         {
-            try { await pumpTask.ConfigureAwait(false); } catch { /* best effort */ }
+            try { await pumpTask.ConfigureAwait(false); } catch { }
         }
 
         string tail;
@@ -305,7 +433,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         }
         catch
         {
-            // best effort
         }
     }
 
@@ -355,9 +482,12 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
 
     private sealed record FfmpegPaths(string FfmpegPath, string FfprobePath);
 
+    private static readonly string FfmpegVersion = "latest";
+    private static readonly string FfmpegDownloadUrl =
+        "https://ghfast.top/https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip";
+
     private static async Task<FfmpegPaths> EnsureFfmpegAsync(string pluginDir, IProgressReporter reporter, CancellationToken ct)
     {
-        // 1) Environment: explicit env var
         var env = Environment.GetEnvironmentVariable("FFMPEG_PATH");
         if (!string.IsNullOrWhiteSpace(env))
         {
@@ -371,7 +501,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
             }
         }
 
-        // 2) PATH
         var ffmpegFromPath = FindOnPath("ffmpeg");
         var ffprobeFromPath = FindOnPath("ffprobe");
         if (ffmpegFromPath is not null && ffprobeFromPath is not null)
@@ -380,25 +509,16 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
             return new FfmpegPaths(ffmpegFromPath, ffprobeFromPath);
         }
 
-        // 3) plugin-local locations
-        var candidates = new[]
+        var cachedDir = SharedToolCache.GetToolDir("ffmpeg", FfmpegVersion);
+        var cachedFfmpeg = Path.Combine(cachedDir, "bin", "ffmpeg.exe");
+        var cachedFfprobe = Path.Combine(cachedDir, "bin", "ffprobe.exe");
+
+        if (File.Exists(cachedFfmpeg) && File.Exists(cachedFfprobe))
         {
-            pluginDir,
-            Path.Combine(pluginDir, "tools", "ffmpeg"),
-            Path.Combine(pluginDir, "tools", "ffmpeg", "bin"),
-        };
-        foreach (var c in candidates)
-        {
-            var ffPath = ResolveExePath(c, "ffmpeg");
-            var fpPath = ResolveExePath(c, "ffprobe");
-            if (ffPath is not null && fpPath is not null)
-            {
-                reporter.OnLog($"[ffmpeg] using plugin-local: {c}");
-                return new FfmpegPaths(ffPath, fpPath);
-            }
+            reporter.OnLog($"[ffmpeg] using cached: {cachedFfmpeg}");
+            return new FfmpegPaths(cachedFfmpeg, cachedFfprobe);
         }
 
-        // 4) download (Windows only)
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             throw new InvalidOperationException("ffmpeg not found (PATH/plugin dir). Auto-download is implemented for Windows only.");
@@ -407,75 +527,37 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
         await FfmpegEnsureGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            // Double-check after waiting.
-            foreach (var c in candidates)
+            if (File.Exists(cachedFfmpeg) && File.Exists(cachedFfprobe))
             {
-                var ffPath = ResolveExePath(c, "ffmpeg");
-                var fpPath = ResolveExePath(c, "ffprobe");
-                if (ffPath is not null && fpPath is not null)
+                reporter.OnLog($"[ffmpeg] using cached: {cachedFfmpeg}");
+                return new FfmpegPaths(cachedFfmpeg, cachedFfprobe);
+            }
+
+            reporter.OnLog("[ffmpeg] downloading FFmpeg...");
+
+            await SharedToolCache.DownloadAndExtractAsync(
+                "ffmpeg",
+                FfmpegVersion,
+                FfmpegDownloadUrl,
+                cachedDir,
+                reporter,
+                ct);
+
+            if (!File.Exists(cachedFfmpeg) || !File.Exists(cachedFfprobe))
+            {
+                var ffmpegExe = Directory.GetFiles(cachedDir, "ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault();
+                var ffprobeExe = Directory.GetFiles(cachedDir, "ffprobe.exe", SearchOption.AllDirectories).FirstOrDefault();
+                
+                if (ffmpegExe is not null && ffprobeExe is not null)
                 {
-                    return new FfmpegPaths(ffPath, fpPath);
+                    return new FfmpegPaths(ffmpegExe, ffprobeExe);
                 }
+                
+                throw new InvalidOperationException("FFmpeg downloaded but executables not found.");
             }
 
-            var toolsDir = Path.Combine(pluginDir, "tools", "ffmpeg");
-            Directory.CreateDirectory(toolsDir);
-
-            reporter.OnLog("[ffmpeg] downloading FFmpeg (Windows) ...");
-
-            // BtbN automated build (stable "latest" URL).
-            var url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip";
-            var zipPath = Path.Combine(toolsDir, "ffmpeg.zip");
-            var extractDir = Path.Combine(toolsDir, "_extract");
-
-            if (Directory.Exists(extractDir))
-            {
-                try { Directory.Delete(extractDir, recursive: true); } catch { /* best effort */ }
-            }
-            Directory.CreateDirectory(extractDir);
-
-            using (var http = new HttpClient())
-            using (var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false))
-            {
-                resp.EnsureSuccessStatusCode();
-                await using var fs = File.Create(zipPath);
-                await resp.Content.CopyToAsync(fs, ct).ConfigureAwait(false);
-            }
-
-            ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
-
-            // The zip contains a top-level folder with bin/ffmpeg.exe.
-            var ffmpegExe = Directory.GetFiles(extractDir, "ffmpeg.exe", SearchOption.AllDirectories).FirstOrDefault();
-            var ffprobeExe = Directory.GetFiles(extractDir, "ffprobe.exe", SearchOption.AllDirectories).FirstOrDefault();
-            if (ffmpegExe is null || ffprobeExe is null)
-            {
-                throw new InvalidOperationException("Downloaded FFmpeg zip did not contain ffmpeg.exe/ffprobe.exe.");
-            }
-
-            var binDir = Path.GetDirectoryName(ffmpegExe) ?? extractDir;
-            var targetBin = Path.Combine(toolsDir, "bin");
-            Directory.CreateDirectory(targetBin);
-
-            // Copy bin folder to toolsDir/bin (include required dlls).
-            foreach (var file in Directory.GetFiles(binDir))
-            {
-                var name = Path.GetFileName(file);
-                File.Copy(file, Path.Combine(targetBin, name), overwrite: true);
-            }
-
-            // Clean up (keep zip for debugging? remove to save space).
-            try { File.Delete(zipPath); } catch { /* best effort */ }
-            try { Directory.Delete(extractDir, recursive: true); } catch { /* best effort */ }
-
-            var ff = ResolveExePath(targetBin, "ffmpeg");
-            var fp = ResolveExePath(targetBin, "ffprobe");
-            if (ff is null || fp is null)
-            {
-                throw new InvalidOperationException("FFmpeg downloaded but executables not found in tools/ffmpeg/bin.");
-            }
-
-            reporter.OnLog("[ffmpeg] download OK: tools/ffmpeg/bin");
-            return new FfmpegPaths(ff, fp);
+            reporter.OnLog($"[ffmpeg] download OK: {cachedFfmpeg}");
+            return new FfmpegPaths(cachedFfmpeg, cachedFfprobe);
         }
         finally
         {
@@ -500,7 +582,6 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
 
     private static string? ResolveExePath(string baseDirOrFile, string exeNameNoExt)
     {
-        // base can be directory or direct exe path
         if (File.Exists(baseDirOrFile))
         {
             return baseDirOrFile;
@@ -515,4 +596,3 @@ public sealed class VideoTranscoderPlugin : IConverterPlugin
     private static string QuoteIfNeeded(string s)
         => s.Any(char.IsWhiteSpace) ? $"\"{s}\"" : s;
 }
-

@@ -15,49 +15,24 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
 {
     private const string MagickExeName = "magick.exe";
 
-    // Cached under user's profile; avoids requiring admin install.
-    private static readonly string CacheRoot =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ConverTool", "imagemagick");
+    private static readonly string ImVersion = "7.1.2-17-portable-Q16-x64";
 
-    // Portable archive url provided by ImageMagick official download page.
-    // Notes:
-    // - This is a .7z archive; we extract it using SharpCompress.
-    // - If download/extract fails, we fall back to returning a clear error.
-    private static readonly string ImVersionKey = "7.1.2-17-portable-Q16-x64";
-    private static readonly string ImInstallDir = Path.Combine(CacheRoot, ImVersionKey);
-    // Some environments may block/return 404 for `imagemagick.org/download/*`.
-    // We try multiple official/known mirrors in order and use the first that succeeds.
     private static readonly string[] ImDownloadUrls =
     {
-        // (current, may fail with 404 in some networks)
-        "https://imagemagick.org/download/ImageMagick-7.1.2-17-portable-Q16-x64.7z",
-
-        // official archive host
+        "https://ghfast.top/https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-17/ImageMagick-7.1.2-17-portable-Q16-x64.7z",
         "https://download.imagemagick.org/archive/binaries/ImageMagick-7.1.2-17-portable-Q16-x64.7z",
-        "https://download.imagemagick.org/archive/binaries/ImageMagick-7.1.2-17-portable-Q16-HDRI-x64.7z",
-        "https://download.imagemagick.org/archive/binaries/ImageMagick-7.1.2-17-portable-Q8-x64.7z",
-
-        // GitHub release asset direct link (official repository)
         "https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-17/ImageMagick-7.1.2-17-portable-Q16-x64.7z",
-        "https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-17/ImageMagick-7.1.2-17-portable-Q16-HDRI-x64.7z",
-        "https://github.com/ImageMagick/ImageMagick/releases/download/7.1.2-17/ImageMagick-7.1.2-17-portable-Q8-x64.7z",
     };
-    private static readonly string ImArchivePath = Path.Combine(ImInstallDir, "imagemagick.7z");
 
-    // 7-Zip extractor for .7z archives.
-    // Requirement: "official" download, so we use 7-zip.org's official `7zr.exe` console extractor.
-    private static readonly string SevenZipExeName = "7zr.exe";
-    private static readonly string SevenZipInstallDir =
-        Path.Combine(CacheRoot, "7zip");
-    private static readonly string SevenZipExePath =
-        Path.Combine(SevenZipInstallDir, SevenZipExeName);
-    private static readonly string SevenZipDownloadUrl =
-        "https://www.7-zip.org/a/7zr.exe";
+    private static readonly string SevenZipVersion = "24.09";
+    private static readonly string SevenZipDownloadUrl = "https://www.7-zip.org/a/7zr.exe";
+
+    private static readonly SemaphoreSlim ToolEnsureGate = new(1, 1);
 
     public PluginManifest GetManifest()
         => new PluginManifest(
             "imagemagick.image.transcoder",
-            "0.1.0",
+            "1.1.0",
             new[]
             {
                 "png", "jpg", "jpeg", "bmp", "gif", "tif", "tiff", "webp", "ico", "avif", "heic"
@@ -444,7 +419,6 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
 
     private static async Task<string> EnsureMagickAsync(IProgressReporter reporter, CancellationToken ct)
     {
-        // 1) Try local PATH first (fast path).
         var fromPath = TryGetMagickFromPath();
         if (fromPath is not null)
         {
@@ -452,31 +426,46 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
             return fromPath;
         }
 
-        // 2) Try cached install.
-        var cached = Path.Combine(ImInstallDir, MagickExeName);
+        var imDir = SharedToolCache.GetToolDir("imagemagick", ImVersion);
+        var cached = Path.Combine(imDir, MagickExeName);
         if (File.Exists(cached))
         {
             reporter.OnLog($"[imagemagick] using cached: {cached}");
             return cached;
         }
 
-        // 3) Download + extract portable archive to cache dir.
-        reporter.OnLog("[imagemagick] magick not found, downloading portable package...");
-        Directory.CreateDirectory(ImInstallDir);
-
-        await DownloadAnyAsync(ImDownloadUrls, ImArchivePath, reporter, ct).ConfigureAwait(false);
-        reporter.OnLog("[imagemagick] extracting portable package...");
-        await ExtractSevenZipAsync(ImArchivePath, ImInstallDir, reporter, ct).ConfigureAwait(false);
-
-        var magick = Directory.EnumerateFiles(ImInstallDir, MagickExeName, SearchOption.AllDirectories)
-            .FirstOrDefault();
-        if (magick is null)
+        await ToolEnsureGate.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            throw new FileNotFoundException($"ImageMagick download/extract completed but {MagickExeName} not found in cache.");
-        }
+            if (File.Exists(cached))
+            {
+                reporter.OnLog($"[imagemagick] using cached: {cached}");
+                return cached;
+            }
 
-        reporter.OnLog($"[imagemagick] ready: {magick}");
-        return magick;
+            reporter.OnLog("[imagemagick] downloading portable package...");
+            Directory.CreateDirectory(imDir);
+
+            var archivePath = Path.Combine(SharedToolCache.CacheRoot, $"imagemagick-{ImVersion}.7z");
+            await DownloadAnyAsync(ImDownloadUrls, archivePath, reporter, ct).ConfigureAwait(false);
+
+            reporter.OnLog("[imagemagick] extracting portable package...");
+            await ExtractSevenZipAsync(archivePath, imDir, reporter, ct).ConfigureAwait(false);
+
+            var magick = Directory.EnumerateFiles(imDir, MagickExeName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+            if (magick is null)
+            {
+                throw new FileNotFoundException($"ImageMagick download/extract completed but {MagickExeName} not found in cache.");
+            }
+
+            reporter.OnLog($"[imagemagick] ready: {magick}");
+            return magick;
+        }
+        finally
+        {
+            ToolEnsureGate.Release();
+        }
     }
 
     private static string? TryGetMagickFromPath()
@@ -660,21 +649,24 @@ public sealed class ImageMagickImageTranscoderPlugin : IConverterPlugin
 
     private static async Task<string> Ensure7ZipAsync(IProgressReporter reporter, CancellationToken ct)
     {
-        Directory.CreateDirectory(SevenZipInstallDir);
-        if (File.Exists(SevenZipExePath))
+        var sevenZipDir = SharedToolCache.GetToolDir("7zip", SevenZipVersion);
+        var sevenZipExePath = Path.Combine(sevenZipDir, "7zr.exe");
+
+        if (File.Exists(sevenZipExePath))
         {
-            reporter.OnLog($"[imagemagick] using cached 7z: {SevenZipExePath}");
-            return SevenZipExePath;
+            reporter.OnLog($"[imagemagick] using cached 7z: {sevenZipExePath}");
+            return sevenZipExePath;
         }
 
-        reporter.OnLog("[imagemagick] downloading 7z extractor (official 7-zip.org)...");
-        await DownloadFileAsync(SevenZipDownloadUrl, SevenZipExePath, reporter, ct).ConfigureAwait(false);
+        reporter.OnLog("[imagemagick] downloading 7z extractor...");
+        Directory.CreateDirectory(sevenZipDir);
+        await DownloadFileAsync(SevenZipDownloadUrl, sevenZipExePath, reporter, ct).ConfigureAwait(false);
 
-        if (!File.Exists(SevenZipExePath))
-            throw new FileNotFoundException("7zr.exe download failed; file not found at cache path.", SevenZipExePath);
+        if (!File.Exists(sevenZipExePath))
+            throw new FileNotFoundException("7zr.exe download failed; file not found at cache path.", sevenZipExePath);
 
-        reporter.OnLog($"[imagemagick] 7z ready: {SevenZipExePath}");
-        return SevenZipExePath;
+        reporter.OnLog($"[imagemagick] 7z ready: {sevenZipExePath}");
+        return sevenZipExePath;
     }
 }
 

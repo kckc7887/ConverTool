@@ -133,12 +133,15 @@ public sealed class PluginManagerViewModel : ObservableObject
                     Manifest: manifest
                 );
 
-                var exts = manifest.SupportedInputExtensions?.Length > 0
-                    ? string.Join(", ", manifest.SupportedInputExtensions)
-                    : "(none)";
-                var formats = manifest.SupportedTargetFormats?.Length > 0
-                    ? string.Join(", ", manifest.SupportedTargetFormats.Select(f => f.Id))
-                    : "(none)";
+                var inputExts = manifest.SupportedInputExtensions ?? Array.Empty<string>();
+                var targetFormats = manifest.SupportedTargetFormats ?? Array.Empty<TargetFormatModel>();
+
+                var extsDisplay = inputExts.Length > 10
+                    ? $"{inputExts.Length} 种格式"
+                    : string.Join(", ", inputExts);
+                var formatsDisplay = targetFormats.Length > 10
+                    ? $"{targetFormats.Length} 种格式"
+                    : string.Join(", ", targetFormats.Select(f => f.Id));
 
                 var title = string.IsNullOrWhiteSpace(manifest.TitleKey)
                     ? manifest.PluginId
@@ -156,7 +159,7 @@ public sealed class PluginManagerViewModel : ObservableObject
                     PluginDir: pluginDir,
                     Title: title,
                     Description: description,
-                    Summary: $"{exts} → {formats}"
+                    Summary: $"输入: {extsDisplay} | 输出: {formatsDisplay}"
                 ));
             }
             catch

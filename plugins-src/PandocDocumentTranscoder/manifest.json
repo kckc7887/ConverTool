@@ -1,0 +1,63 @@
+{
+  "pluginId": "pandoc.document.transcoder",
+  "version": "1.1.0",
+  "author": "Chnynnya",
+  "assembly": "PandocDocumentTranscoder.dll",
+  "type": "PandocDocumentTranscoder.PandocDocumentTranscoderPlugin",
+  "supportsTerminationOnCancel": true,
+  "titleKey": "plugin/pandoc.document.transcoder/title",
+  "descriptionKey": "plugin/pandoc.document.transcoder/description",
+  "supportedInputExtensions": [
+    "md", "markdown", "docx", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex",
+    "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc", "ppt", "pptx", "pdf"
+  ],
+  "supportedTargetFormats": [
+    { "id": "docx", "displayNameKey": "plugin/pandoc.document.transcoder/target/docx", "inputExtensions": ["md", "markdown", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "doc", "displayNameKey": "plugin/pandoc.document.transcoder/target/doc", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst"] },
+    { "id": "odt", "displayNameKey": "plugin/pandoc.document.transcoder/target/odt", "inputExtensions": ["md", "markdown", "docx", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "html", "displayNameKey": "plugin/pandoc.document.transcoder/target/html", "inputExtensions": ["md", "markdown", "docx", "odt", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "epub", "displayNameKey": "plugin/pandoc.document.transcoder/target/epub", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "md", "displayNameKey": "plugin/pandoc.document.transcoder/target/md", "inputExtensions": ["docx", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "txt", "displayNameKey": "plugin/pandoc.document.transcoder/target/txt", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "epub", "rst", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "rst", "displayNameKey": "plugin/pandoc.document.transcoder/target/rst", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "epub", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc"] },
+    { "id": "typst", "displayNameKey": "plugin/pandoc.document.transcoder/target/typst", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "doc"] },
+    { "id": "pdf", "displayNameKey": "plugin/pandoc.document.transcoder/target/pdf", "inputExtensions": ["md", "markdown", "docx", "odt", "html", "htm", "epub", "rst", "txt", "latex", "tex", "docbook", "org", "ipynb", "csv", "tsv", "fb2", "typst", "doc", "ppt", "pptx"] },
+    { "id": "png", "displayNameKey": "plugin/pandoc.document.transcoder/target/pngLong", "inputExtensions": ["pdf"] },
+    { "id": "jpg", "displayNameKey": "plugin/pandoc.document.transcoder/target/jpgLong", "inputExtensions": ["pdf"] },
+    { "id": "zip", "displayNameKey": "plugin/pandoc.document.transcoder/target/zip", "inputExtensions": ["pdf"] }
+  ],
+  "configSchema": {
+    "sections": [
+      {
+        "id": "pdfImageOutput",
+        "titleKey": "plugin/pandoc.document.transcoder/section/pdfImageOutput",
+        "descriptionKey": "plugin/pandoc.document.transcoder/section/pdfImageOutputDesc",
+        "collapsedByDefault": false,
+        "fields": [
+          {
+            "key": "Dpi",
+            "type": "Range",
+            "labelKey": "plugin/pandoc.document.transcoder/field/dpi",
+            "defaultValue": 150,
+            "range": { "min": 72, "max": 300, "step": 1 },
+            "visibleForInputExtensions": ["pdf"]
+          },
+          {
+            "key": "ZipImageFormat",
+            "type": "Select",
+            "labelKey": "plugin/pandoc.document.transcoder/field/zipImageFormat",
+            "defaultValue": "png",
+            "visibleForInputExtensions": ["pdf"],
+            "visibleForTargetFormats": ["zip"],
+            "options": [
+              { "id": "png", "labelKey": "plugin/pandoc.document.transcoder/zipInner/png" },
+              { "id": "jpg", "labelKey": "plugin/pandoc.document.transcoder/zipInner/jpg" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "supportedLocales": [ "en-US", "zh-CN" ],
+  "i18n": { "localesFolder": "locales" }
+}

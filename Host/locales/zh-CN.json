@@ -12,6 +12,7 @@
     "host/input/browse": "浏览…",
     "host/input/remove": "移除",
     "host/input/clearAll": "清空全部",
+    "host/input/unsupportedFormat": "不支持的文件格式",
     "host/config/placeholder": "配置界面由插件提供。",
     "host/config/activateByInput": "输入文件以激活插件配置。",
     "host/config/noPluginHint": "呃，你得先添加插件才能使用。请点击右上角“添加插件”。",
@@ -23,10 +24,17 @@
     "host/output/browse": "浏览…",
     "host/output/useInputDir": "使用原文件所在位置",
     "host/output/targetExtSuffixPrefix": "目标格式后缀：",
-    "host/output/namingTemplateTokenBaseText": "文件名",
+    "host/output/namingTemplateTokenBaseText": "原文件名",
     "host/output/namingTemplateTokenIndexText": "序号",
     "host/output/namingTemplateTokenTimeDateText": "时间：年月日",
     "host/output/namingTemplateTokenTimeHmsText": "时间：时分秒",
+    "host/output/namingTemplateCustom1Default": "自定义1",
+    "host/output/namingTemplateCustom2Default": "自定义2",
+    "host/output/namingTemplateCustom3Default": "自定义3",
+    "host/output/namingTemplateCustomRowLabel": "自定义标签：",
+    "host/output/namingTemplateCustom1Watermark": "标签1",
+    "host/output/namingTemplateCustom2Watermark": "标签2",
+    "host/output/namingTemplateCustom3Watermark": "标签3",
     "host/output/templateLabel": "命名模板"
     ,
     "host/process/progressLabel": "进度"
@@ -45,7 +53,7 @@
     ,
     "host/process/parallelism": "并行度"
     ,
-    "host/output/templateHelp": "点击下方标签加入或移除；拖动已选标签可调整顺序。多个标签之间用下划线连接。右侧为当前目标格式的扩展名。"
+    "host/output/templateHelp": "点击下方标签加入或移除；拖动已选标签可调整顺序。多个标签之间用下划线连接。若未选择任何标签，则默认使用原文件名。右侧为当前目标格式的扩展名。自定义标签可在下方输入框中修改显示名称。"
     ,
     "host/pluginManager/title": "插件管理",
     "host/pluginManager/refresh": "刷新",

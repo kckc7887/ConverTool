@@ -9,7 +9,7 @@
 | 仓库 | 内容 | 受众 |
 |------|------|------|
 | **Host 仓库**（本仓库） | Avalonia 桌面应用、`plugins-src` 示例插件、安装器、文档等 | 应用维护者、内置插件维护者 |
-| **PluginAbstractions 仓库**（契约库，独立库） | 仅 C# 契约：`IConverterPlugin`、`ExecuteContext`、与 manifest 对齐的类型等 | **插件开发者**（通过 NuGet 引用） |
+| **PluginAbstractions 仓库**（契约库，独立库） | 仅 C# 契约：`IConverterPlugin`、`ExecuteContext`、`PluginManifest`、`SharedToolCache` 等 | **插件开发者**（通过 NuGet 引用） |
 
 契约库 **不是** Host 仓库的子目录产物；在版本控制上 **不应** 将契约源码并入 Host 仓库（本仓库根目录 `.gitignore` 已忽略本地路径 `PluginAbstractions/`，见下）。
 
@@ -28,8 +28,9 @@
 | 项 | 说明 |
 |----|------|
 | **包 ID** | `ConverTool.PluginAbstractions` |
+| **当前版本** | 1.1.0（与 Host **v1.1.0** 发行线对齐） |
 | **用途** | 插件工程引用后实现 `IConverterPlugin` 等；版本需与目标 Host 文档中声明的契约版本一致。 |
-| **获取方式** | 以团队发布为准：公共源（如 nuget.org）、GitHub Packages、或 Release 中的 `.nupkg`。包页或组织主页通常提供**契约仓库**链接。 |
+| **获取方式** | 以团队发布为准：公共源（如 nuget.org）、GitHub Packages、或 Release 中的 `.nupkg`。 |
 
 详细字段与 `manifest.json` 对齐说明见 **[plugin-dev.md](./plugin-dev.md)**。
 
@@ -60,10 +61,8 @@ Host 与 `plugins-src` 中的工程使用 **`ProjectReference`** 指向与 Host 
 
 ## 5. 与「仅从 NuGet 引用」的关系
 
-- **插件作者的日常**：在插件 `.csproj` 中使用 **`PackageReference`** `ConverTool.PluginAbstractions`（版本与目标 Host 一致）。**不需要** clone Host 仓库。
+- **插件作者的日常**：在插件 `.csproj` 中使用 **`PackageReference`** `ConverTool.PluginAbstractions`（版本与目标 Host 文档中声明的**契约版本**一致，当前 **1.1.0**）。**不需要** clone Host 仓库。
 - **Host 仓库维护者**：为便于与契约同机联调，当前采用 **本地 `ProjectReference`**；该路径对应磁盘上由**另一仓库 clone** 得到的 `PluginAbstractions/`，该目录被 **`.gitignore`**，因此不会进入 Host 的 Git 历史。
-
-若将来 Host 改为**仅**从 NuGet 还原契约（CI 只拉取包），需在 CI 中配置可用的 NuGet 源并发布对应版本的包。
 
 ---
 
@@ -72,7 +71,7 @@ Host 与 `plugins-src` 中的工程使用 **`ProjectReference`** 指向与 Host 
 | 产物 | 通常在哪个仓库 / 流程 |
 |------|------------------------|
 | `ConverTool` 安装包、full/lite zip | Host 仓库（流程见 `installer/README.md`） |
-| `ConverTool.PluginAbstractions.x.y.z.nupkg` | **契约仓库** 内对契约项目 `dotnet pack` 与打 tag；可与 Host 共用版本号约定（`.csproj` 路径以该仓库为准） |
+| `ConverTool.PluginAbstractions.x.y.z.nupkg` | **契约仓库** 内对契约项目 `dotnet pack` 与打 tag；可与 Host 共用版本号约定 |
 
 Host 侧 Release 可选附上契约 `.nupkg` 仅为分发便利；**源码与包的主发布仍属契约仓库**。
 
@@ -81,8 +80,7 @@ Host 侧 Release 可选附上契约 `.nupkg` 仅为分发便利；**源码与包
 ## 7. 参考链接
 
 - **Host 仓库（GitHub）**：<https://github.com/kckc7887/ConverTool>
-- **契约仓库（GitHub）**：<https://github.com/kckc7887/ConverTool-PluginAbstractions>（与本地 `PluginAbstractions` 工程中的 Source Link / 远程约定一致）。
-- 用户向说明仍见根目录 **[README.md](../README.md)** 与 **[docs/README.md](./README.md)**。
+- **契约仓库（GitHub）**：<https://github.com/kckc7887/ConverTool-PluginAbstractions>
 
 ---
 
@@ -96,21 +94,12 @@ Host 侧 Release 可选附上契约 `.nupkg` 仅为分发便利；**源码与包
 
 ### 8.2 使用代理访问 GitHub（可选）
 
-若需通过 HTTP(S) 代理访问 GitHub（如 Clash、V2 等），可在**同一终端**先设置环境变量再执行 `git clone` / `dotnet restore`（端口号按本机代理为准，常见为 `7890`）：
+若需通过 HTTP(S) 代理访问 GitHub，可在**同一终端**先设置环境变量：
 
 ```powershell
 $env:HTTPS_PROXY = "http://127.0.0.1:7890"
 $env:HTTP_PROXY  = "http://127.0.0.1:7890"
 ```
-
-也可仅为 Git 配置（不影响全局时可加 `--local` 在仓库内执行）：
-
-```powershell
-git config --global http.proxy  http://127.0.0.1:7890
-git config --global https.proxy http://127.0.0.1:7890
-```
-
-取消代理：`git config --global --unset http.proxy`（及 `https.proxy`）。
 
 ### 8.3 推荐命令（在父目录中执行）
 
@@ -130,14 +119,9 @@ git clone https://github.com/kckc7887/ConverTool-PluginAbstractions.git PluginAb
 
 ```powershell
 dotnet build .\Host\Host.csproj -c Release
-```
-
-或使用仓库内脚本（检查契约路径并构建 Host + `plugins-src` 示例插件）：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\installer\scripts\verify-dev-setup.ps1
+dotnet test .\Host.Tests\Host.Tests.csproj -c Release
 ```
 
 ### 8.5 仅开发独立插件（不 clone Host）
 
-在自有解决方案中 **`PackageReference`** `ConverTool.PluginAbstractions`（版本与目标 Host 文档一致），无需上述目录布局；参见 **[plugin-dev.md](./plugin-dev.md)**。
+在自有解决方案中 **`PackageReference`** `ConverTool.PluginAbstractions`（版本与本文 **§2 当前版本** 及 **[plugin-dev.md](./plugin-dev.md)** 中契约版本一致，当前 **1.1.0**），无需上述目录布局。

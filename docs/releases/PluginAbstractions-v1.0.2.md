@@ -1,5 +1,7 @@
 # ConverTool.PluginAbstractions v1.0.2（契约库）
 
+> **较新契约版本**：请见 **[PluginAbstractions-v1.1.0.md](./PluginAbstractions-v1.1.0.md)**（`visibleForTargetFormats` / `ConfigField.VisibleForTargetFormatIds`）。
+
 > **受众**：插件开发者（面向 NuGet 包 `ConverTool.PluginAbstractions`）。  
 > **仓库**：[ConverTool-PluginAbstractions](https://github.com/kckc7887/ConverTool-PluginAbstractions)（与 Host **不同库**；本地开发目录名 **`PluginAbstractions/`** 见 [`repositories.md`](../repositories.md)）。  
 > **主发布**：以契约仓库内的 **`CHANGELOG.md`** / **`README.md`** 为准；本文件便于在 Host 文档索引中检索。

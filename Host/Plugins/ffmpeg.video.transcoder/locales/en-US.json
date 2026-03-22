@@ -1,26 +1,52 @@
 {
   "strings": {
-    "plugin/ffmpeg.video.transcoder/title": "FFmpeg Video Transcoder",
-    "plugin/ffmpeg.video.transcoder/description": "Transcode videos using FFmpeg (CRF + HW acceleration).",
+    "plugin/ffmpeg.video.transcoder/title": "Video Converter",
+    "plugin/ffmpeg.video.transcoder/description": "Convert videos to other formats. Adjust quality and resolution as needed.",
 
-    "plugin/ffmpeg.video.transcoder/section/basic": "Basic",
+    "plugin/ffmpeg.video.transcoder/section/advanced": "More Options",
 
-    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4 (most compatible)",
-    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV (flexible container)",
-    "plugin/ffmpeg.video.transcoder/target/mov": "MOV (Apple workflow)",
-    "plugin/ffmpeg.video.transcoder/target/webm": "WebM (web-first)",
-    "plugin/ffmpeg.video.transcoder/target/avi": "AVI (legacy devices)",
+    "plugin/ffmpeg.video.transcoder/target/mp4": "MP4 (recommended, best compatibility)",
+    "plugin/ffmpeg.video.transcoder/target/mkv": "MKV (great for multiple audio tracks)",
+    "plugin/ffmpeg.video.transcoder/target/mov": "MOV (best for Apple devices)",
+    "plugin/ffmpeg.video.transcoder/target/webm": "WebM (best for websites)",
+    "plugin/ffmpeg.video.transcoder/target/avi": "AVI (for older devices)",
+    "plugin/ffmpeg.video.transcoder/target/flv": "FLV (Flash video)",
+    "plugin/ffmpeg.video.transcoder/target/m4v": "M4V (Apple video)",
+    "plugin/ffmpeg.video.transcoder/target/ts": "TS (transport stream)",
+    "plugin/ffmpeg.video.transcoder/target/mts": "MTS (AVCHD video)",
+    "plugin/ffmpeg.video.transcoder/target/m2ts": "M2TS (Blu-ray video)",
+    "plugin/ffmpeg.video.transcoder/target/ogg": "OGG (Ogg video)",
+    "plugin/ffmpeg.video.transcoder/target/ogv": "OGV (Ogg video)",
 
-    "plugin/ffmpeg.video.transcoder/field/crf/label": "CRF / Quality",
-    "plugin/ffmpeg.video.transcoder/field/crf/help": "Lower is better quality and larger file. Typical: 18-28 (CPU/x264). For GPU encoders, CRF is mapped to the closest quality parameter.",
+    "plugin/ffmpeg.video.transcoder/field/enableAdvancedConfig/label": "Adjust quality and resolution",
 
-    "plugin/ffmpeg.video.transcoder/field/hw/label": "Hardware acceleration",
-    "plugin/ffmpeg.video.transcoder/field/hw/help": "Select encoder backend. Requires matching GPU and FFmpeg build with the encoder enabled.",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "CPU (libx264)",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA (NVENC)",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD (AMF)",
-    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel (QSV)"
+    "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/label": "Remember my settings",
+    "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/help": "When checked, these settings will be saved for next time. Uncheck to reset to defaults.",
+
+    "plugin/ffmpeg.video.transcoder/field/resolution/label": "Resolution",
+    "plugin/ffmpeg.video.transcoder/field/resolution/help": "Choose video size. Higher resolution means clearer picture but larger file size.",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/keep": "Keep original",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/4k": "4K Ultra HD",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/1080p": "1080P Full HD",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/720p": "720P HD",
+    "plugin/ffmpeg.video.transcoder/field/resolution/opt/480p": "480P Standard",
+
+    "plugin/ffmpeg.video.transcoder/field/framerate/label": "Smoothness",
+    "plugin/ffmpeg.video.transcoder/field/framerate/help": "Frames per second. Higher numbers mean smoother video but larger files.",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/keep": "Keep original",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/60": "60 fps (very smooth)",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/30": "30 fps (smooth)",
+    "plugin/ffmpeg.video.transcoder/field/framerate/opt/24": "24 fps (cinematic)",
+
+    "plugin/ffmpeg.video.transcoder/field/crf/label": "Quality",
+    "plugin/ffmpeg.video.transcoder/field/crf/help": "Lower numbers mean better quality but larger files. Recommended range: 18-28.",
+
+    "plugin/ffmpeg.video.transcoder/field/hw/label": "Speed",
+    "plugin/ffmpeg.video.transcoder/field/hw/help": "Choose how fast to process. Auto uses your graphics card for faster speeds.",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/auto": "Auto (recommended)",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu": "Processor only",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia": "NVIDIA graphics card",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/amd": "AMD graphics card",
+    "plugin/ffmpeg.video.transcoder/field/hw/opt/intel": "Intel graphics card"
   }
 }
-
-

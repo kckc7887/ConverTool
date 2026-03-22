@@ -1,26 +1,119 @@
 # ConverTool
 
-轻量级桌面文件转换工具（Avalonia + 插件架构）。**v1.0** 起默认附带两个基础插件（**当前主线版本 1.0.2**，与 `Host/Host.csproj` 一致；**自带插件**的 `manifest.json` 中 `version` 与 Host 同步，见 `docs/plugin-dev.md`），安装后即可转换常见视频与图片格式；也可在「插件管理」中安装更多 `.zip` 插件。
+**简单好用的文件格式转换工具**
 
-- **下载安装（Windows）**：[GitHub Releases](https://github.com/kckc7887/ConverTool/releases) 提供 **安装程序 `setup.exe`** 以及 **免安装 zip（full / lite）**，无需自行编译。
-- **详细说明（含使用方法与技术文档）** → [docs/README.md](docs/README.md)
+视频、图片、文档，拖进去就能转。
 
-## 内置基础插件（默认附带）
+---
 
-| 插件 | 作用 | 说明 |
-|------|------|------|
-| **FFmpeg 视频转码** (`ffmpeg.video.transcoder`) | 视频容器/编码转换 | 依赖系统 **PATH** 中的 `ffmpeg`。支持 MP4、MKV、MOV、WebM、AVI 等目标格式，可在界面中调节质量（CRF）等选项。 |
-| **ImageMagick 图片转换** (`imagemagick.image.transcoder`) | 任意常见图片互转与压缩 | 依赖 **ImageMagick** 的 `magick` 命令。若未安装，插件会尝试自动下载便携包（含 7z 解压逻辑，见插件实现）。支持 PNG、JPEG、WebP、TIFF、ICO 等。 |
+## ✨ 特点
 
-安装包或发布目录中的 `plugins/` 下已包含上述插件；卸载或替换插件后，仍可通过「添加插件」从 `plugins-src` 构建的 zip 重新安装。
+- **开箱即用** — 安装后无需配置，自动下载所需工具
+- **拖拽转换** — 把文件拖进窗口，选择格式，一键转换
+- **批量处理** — 支持多个文件同时转换
+- **插件扩展** — 需要更多格式？安装插件即可
+- **自定义命名** — 支持自定义输出文件名模板，包含时间、序号等变量
+- **共享缓存** — 工具文件共享缓存，节省磁盘空间和下载时间
 
-## 仓库结构提示
+---
 
-- **应用本体**：`Host/`（发布后用户可见文件名为 `ConverTool.exe`）
-- **插件契约**：**独立 Git 仓库**（与 **本 Host 仓库不同库**），以 NuGet 包 **`ConverTool.PluginAbstractions`** 提供给插件开发者；约定与边界见 **[docs/repositories.md](docs/repositories.md)**。若需在本机同时编译 Host 与 `plugins-src`，请按该文档 **§8** 克隆两个仓库（契约库目录名必须为 **`PluginAbstractions`**），或运行 **`installer/scripts/verify-dev-setup.ps1`** 做一键校验。
-- **插件源码与构建**：`plugins-src/`、`plugins-src/build-and-sync.ps1`
-- **Windows 安装包**：`installer/`（Inno Setup）
+## 📥 下载安装
 
-## 许可证
+前往 [GitHub Releases](https://github.com/kckc7887/ConverTool/releases) 下载：
 
-见仓库根目录 [LICENSE](LICENSE)（MIT）。
+| 版本 | 说明 |
+|------|------|
+| **安装版** | 双击安装，自动关联文件 |
+| **便携版** | 解压即用，无需安装 |
+
+---
+
+## 🎬 支持的格式
+
+### 视频转换器
+MP4、MKV、MOV、WebM、AVI、FLV、M4V、TS、MTS、M2TS、OGG、OGV...
+
+> 可调节分辨率、帧率、画质
+
+### 图片转换器
+PNG、JPEG、WebP、TIFF、ICO、AVIF、BMP...
+
+> 可控制输出文件大小
+
+### 文档转换器
+Markdown、Word（DOCX/DOC）、HTML、EPUB、PDF、TXT...
+
+---
+
+## 🚀 快速上手
+
+1. **打开 ConverTool**
+2. **拖入文件** — 或点击「浏览」选择
+3. **选择输出格式** — 从下拉列表选择目标格式
+4. **点击开始** — 等待转换完成
+5. **查看结果** — 输出文件在指定目录
+
+---
+
+## ❓ 常见问题
+
+**Q: 转换需要联网吗？**
+
+A: 首次使用某个转换器时，会自动下载所需工具（约 50-200MB），之后可离线使用。
+
+**Q: 转换速度慢？**
+
+A: 视频转换耗时取决于文件大小和分辨率。大文件建议先用较低分辨率测试。
+
+**Q: 支持哪些操作系统？**
+
+A: 目前支持 Windows。
+
+---
+
+## 🛠️ 开发者
+
+### 构建
+
+需要 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)。
+
+```powershell
+# 克隆仓库
+git clone https://github.com/kckc7887/ConverTool.git
+cd ConverTool
+
+# 克隆契约库（与 Host 平级）
+git clone https://github.com/kckc7887/ConverTool-PluginAbstractions.git PluginAbstractions
+
+# 构建
+dotnet build .\Host\Host.csproj -c Release
+
+# 可选：单元测试（含 config.json / persistValue 等）
+dotnet test .\Host.Tests\Host.Tests.csproj -c Release
+```
+
+### 文档
+
+| 文档 | 说明 |
+|------|------|
+| [docs/README.md](docs/README.md) | 项目概述 |
+| [docs/plugin-dev.md](docs/plugin-dev.md) | 插件开发指南（含 **`visibleForTargetFormats`**、Host/插件 **`config.json`** 与 **`persistValue`**） |
+| [docs/releases/PluginAbstractions-v1.1.0.md](docs/releases/PluginAbstractions-v1.1.0.md) | 契约包 **1.1.0** 变更说明 |
+| [docs/technical/IMPLEMENTATION.md](docs/technical/IMPLEMENTATION.md) | 技术实现细节（含 **`SettingManager`**、配置 UI 规则引擎） |
+| [docs/repositories.md](docs/repositories.md) | 仓库边界说明 |
+
+### 目录结构
+
+```
+ConverTool/
+├── Host/              # 应用本体
+├── plugins-src/       # 内置插件源码
+├── installer/         # 安装包脚本
+└── docs/              # 文档
+```
+
+---
+
+## 📄 许可证
+
+[MIT License](LICENSE) — 自由使用、修改和分发。

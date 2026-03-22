@@ -1,6 +1,6 @@
 {
   "pluginId": "ffmpeg.video.transcoder",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": "Chnynnya",
   "assembly": "FfmpegVideoTranscoder.dll",
   "type": "FfmpegVideoTranscoder.VideoTranscoderPlugin",
@@ -8,27 +8,78 @@
   "titleKey": "plugin/ffmpeg.video.transcoder/title",
   "descriptionKey": "plugin/ffmpeg.video.transcoder/description",
   "supportedInputExtensions": [
-    "mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v", "ts", "mts", "m2ts", "3gp", "ogv"
+    "mp4", "mkv", "mov", "avi", "webm", "flv", "wmv", "m4v", "ts", "mts", "m2ts", "3gp", "ogv", "ogg"
   ],
   "supportedTargetFormats": [
     { "id": "mp4",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mp4" },
     { "id": "mkv",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mkv" },
     { "id": "mov",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mov" },
     { "id": "webm", "displayNameKey": "plugin/ffmpeg.video.transcoder/target/webm" },
-    { "id": "avi",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/avi" }
+    { "id": "avi",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/avi" },
+    { "id": "flv",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/flv" },
+    { "id": "m4v",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/m4v" },
+    { "id": "ts",   "displayNameKey": "plugin/ffmpeg.video.transcoder/target/ts" },
+    { "id": "mts",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/mts" },
+    { "id": "m2ts", "displayNameKey": "plugin/ffmpeg.video.transcoder/target/m2ts" },
+    { "id": "ogg",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/ogg" },
+    { "id": "ogv",  "displayNameKey": "plugin/ffmpeg.video.transcoder/target/ogv" }
   ],
   "configSchema": {
     "sections": [
       {
-        "id": "basic",
-        "titleKey": "plugin/ffmpeg.video.transcoder/section/basic",
+        "id": "advanced",
+        "titleKey": "plugin/ffmpeg.video.transcoder/section/advanced",
         "collapsedByDefault": false,
         "fields": [
+          {
+            "key": "enableAdvancedConfig",
+            "type": "Checkbox",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/enableAdvancedConfig/label",
+            "defaultValue": false
+          },
+          {
+            "key": "retainAdvancedSettings",
+            "type": "Checkbox",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/label",
+            "helpKey": "plugin/ffmpeg.video.transcoder/field/retainAdvancedSettings/help",
+            "visibleIf": { "fieldKey": "enableAdvancedConfig", "equals": true },
+            "defaultValue": false
+          },
+          {
+            "key": "resolution",
+            "type": "Select",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/label",
+            "helpKey": "plugin/ffmpeg.video.transcoder/field/resolution/help",
+            "visibleIf": { "fieldKey": "enableAdvancedConfig", "equals": true },
+            "defaultValue": "keep",
+            "options": [
+              { "id": "keep", "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/opt/keep" },
+              { "id": "4k", "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/opt/4k" },
+              { "id": "1080p", "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/opt/1080p" },
+              { "id": "720p", "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/opt/720p" },
+              { "id": "480p", "labelKey": "plugin/ffmpeg.video.transcoder/field/resolution/opt/480p" }
+            ]
+          },
+          {
+            "key": "framerate",
+            "type": "Select",
+            "labelKey": "plugin/ffmpeg.video.transcoder/field/framerate/label",
+            "helpKey": "plugin/ffmpeg.video.transcoder/field/framerate/help",
+            "visibleIf": { "fieldKey": "enableAdvancedConfig", "equals": true },
+            "defaultValue": "keep",
+            "options": [
+              { "id": "keep", "labelKey": "plugin/ffmpeg.video.transcoder/field/framerate/opt/keep" },
+              { "id": "60", "labelKey": "plugin/ffmpeg.video.transcoder/field/framerate/opt/60" },
+              { "id": "30", "labelKey": "plugin/ffmpeg.video.transcoder/field/framerate/opt/30" },
+              { "id": "24", "labelKey": "plugin/ffmpeg.video.transcoder/field/framerate/opt/24" }
+            ]
+          },
           {
             "key": "crf",
             "type": "Number",
             "labelKey": "plugin/ffmpeg.video.transcoder/field/crf/label",
             "helpKey": "plugin/ffmpeg.video.transcoder/field/crf/help",
+            "visibleIf": { "fieldKey": "enableAdvancedConfig", "equals": true },
             "defaultValue": 23,
             "range": { "min": 0, "max": 51, "step": 1 }
           },
@@ -37,8 +88,11 @@
             "type": "Select",
             "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/label",
             "helpKey": "plugin/ffmpeg.video.transcoder/field/hw/help",
-            "defaultValue": "cpu",
+            "visibleIf": { "fieldKey": "enableAdvancedConfig", "equals": true },
+            "visibleForTargetFormats": ["mp4", "mkv", "mov", "webm", "avi", "flv", "m4v", "ts", "mts", "m2ts"],
+            "defaultValue": "auto",
             "options": [
+              { "id": "auto", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/auto" },
               { "id": "cpu", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/cpu" },
               { "id": "nvidia", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/nvidia" },
               { "id": "amd", "labelKey": "plugin/ffmpeg.video.transcoder/field/hw/opt/amd" },
@@ -47,9 +101,20 @@
           }
         ]
       }
+    ],
+    "fieldPersistOverrides": [
+      {
+        "when": { "fieldKey": "retainAdvancedSettings", "equals": false },
+        "fields": {
+          "enableAdvancedConfig": false,
+          "resolution": "keep",
+          "framerate": "keep",
+          "crf": 23,
+          "hw": "auto"
+        }
+      }
     ]
   },
   "supportedLocales": [ "en-US", "zh-CN" ],
   "i18n": { "localesFolder": "locales" }
 }
-

@@ -3,7 +3,7 @@
 > **给最终用户：** 正式版的 `setup.exe` 已随 **[GitHub Releases](https://github.com/kckc7887/ConverTool/releases)** 发布，**无需**克隆仓库或运行本目录下的脚本即可安装。  
 > 只有在你需要**本地修改安装器**或**自行重打安装包**时，才需要按下文构建。
 
-本目录为 Inno Setup 工程（版本号见 `ConverTool.iss` / `build-installer.ps1` 中的参数，当前与主版本一致）。
+本目录为 Inno Setup 工程（版本号见 `ConverTool.iss` / `build-installer.ps1` 中的参数，当前与主版本一致）。**契约 NuGet** `ConverTool.PluginAbstractions` 的版本以 **`docs/repositories.md`** 与根目录 **`PluginAbstractions/PluginAbstractions.csproj`** 为准（当前 **1.1.0**），与安装包版本号可独立演进。
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\scripts\verify-dev-setup.ps
 
 ## Output
 
-- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.0.2` 时对应 `ConverTool-v1.0.2-setup.exe`）
+- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.1.0` 时对应 `ConverTool-v1.1.0-setup.exe`）
 - 若还需打 **full/lite 便携 zip**（在已执行 `build-installer.ps1` 生成 `artifacts/host/v<版本>/...` 之后）：
 
 ```powershell

@@ -1,5 +1,5 @@
 #define AppName "ConverTool"
-#define AppVersion "1.0.2"
+#define AppVersion "1.1.0"
 #define AppPublisher "ConverTool"
 #define AppExeName "ConverTool.exe"
 
@@ -12,8 +12,8 @@ DefaultDirName={autopf}\{#AppName}
 DisableDirPage=no
 UsePreviousAppDir=no
 DefaultGroupName={#AppName}
-; Trash icon for Apps list / uninstall shortcut (unins000.exe still uses SetupIconFile).
-UninstallDisplayIcon={app}\uninstall.ico
+; Control panel shows main app icon (point to ConverTool.exe)
+UninstallDisplayIcon={app}\ConverTool.exe
 ; Use icon next to this script (also copied from Host/Assets for reliable builds).
 SetupIconFile=Assets\convertool-icon.ico
 Compression=lzma
@@ -35,6 +35,7 @@ Name: "custom"; Description: "{cm:TypeCustom}"; Flags: iscustom
 Name: "plugins"; Description: "{cm:BundledPlugins}"; Types: custom
 Name: "plugins\ffmpeg"; Description: "{cm:PluginFfmpeg}"; Types: custom; Flags: checkablealone
 Name: "plugins\imagemagick"; Description: "{cm:PluginImagemagick}"; Types: custom; Flags: checkablealone
+Name: "plugins\pandoc"; Description: "{cm:PluginPandoc}"; Types: custom; Flags: checkablealone
 
 [Tasks]
 Name: "mode_full"; Description: "{cm:InstallModeFull}"; GroupDescription: "{cm:CorePackageMode}"; Flags: exclusive
@@ -52,6 +53,7 @@ Source: "..\artifacts\host\v{#AppVersion}\win-x64-lite\*"; DestDir: "{app}"; Fla
 ; Plugins (component-controlled, default all selected).
 Source: "..\Host\Plugins\ffmpeg.video.transcoder\*"; DestDir: "{app}\plugins\ffmpeg.video.transcoder"; Flags: recursesubdirs createallsubdirs ignoreversion; Components: plugins\ffmpeg
 Source: "..\Host\Plugins\imagemagick.image.transcoder\*"; DestDir: "{app}\plugins\imagemagick.image.transcoder"; Flags: recursesubdirs createallsubdirs ignoreversion; Components: plugins\imagemagick
+Source: "..\Host\Plugins\pandoc.document.transcoder\*"; DestDir: "{app}\plugins\pandoc.document.transcoder"; Flags: recursesubdirs createallsubdirs ignoreversion; Components: plugins\pandoc
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -66,6 +68,7 @@ english.TypeCustom=Custom installation
 english.BundledPlugins=Bundled plugins
 english.PluginFfmpeg=FFmpeg Video Transcoder
 english.PluginImagemagick=ImageMagick Image Transcoder
+english.PluginPandoc=Pandoc Document Transcoder
 english.InstallModeFull=Install Full (self-contained, no .NET runtime required)
 english.InstallModeLite=Install Lite (requires .NET 8 Desktop Runtime)
 english.CorePackageMode=Core package mode:
@@ -74,6 +77,7 @@ chinesesimp.TypeCustom=自定义安装
 chinesesimp.BundledPlugins=内置插件
 chinesesimp.PluginFfmpeg=FFmpeg 视频转码插件
 chinesesimp.PluginImagemagick=ImageMagick 图像转码插件
+chinesesimp.PluginPandoc=Pandoc 文档转换插件
 chinesesimp.InstallModeFull=安装 Full 完整版（自带运行时，无需 .NET 环境）
 chinesesimp.InstallModeLite=安装 Lite 精简版（需要 .NET 8 Desktop Runtime）
 chinesesimp.CorePackageMode=核心安装模式：
@@ -142,7 +146,7 @@ begin
     end;
 
     // Keep plugins selected by default.
-    WizardSelectComponents('plugins\ffmpeg,plugins\imagemagick');
+    WizardSelectComponents('plugins\ffmpeg,plugins\imagemagick,plugins\pandoc');
     TaskDefaultsApplied := True;
   end;
 end;

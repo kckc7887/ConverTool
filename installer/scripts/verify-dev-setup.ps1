@@ -24,7 +24,8 @@ Write-Host "== contract: $contractProj"
 $projects = @(
     (Join-Path $repoRoot "Host\Host.csproj"),
     (Join-Path $repoRoot "plugins-src\FfmpegVideoTranscoder\FfmpegVideoTranscoder.csproj"),
-    (Join-Path $repoRoot "plugins-src\ImageMagickImageTranscoder\ImageMagickImageTranscoder.csproj")
+    (Join-Path $repoRoot "plugins-src\ImageMagickImageTranscoder\ImageMagickImageTranscoder.csproj"),
+    (Join-Path $repoRoot "plugins-src\PandocDocumentTranscoder\PandocDocumentTranscoder.csproj")
 )
 
 foreach ($p in $projects) {

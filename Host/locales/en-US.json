@@ -12,6 +12,7 @@
     "host/input/browse": "Browse...",
     "host/input/remove": "Remove",
     "host/input/clearAll": "Clear all",
+    "host/input/unsupportedFormat": "Unsupported file format",
     "host/config/placeholder": "Config UI is provided by plugins.",
     "host/config/activateByInput": "Add input files to activate plugin config.",
     "host/config/noPluginHint": "You need to add a plugin first. Click “Add plugin” in the top-right.",
@@ -23,10 +24,17 @@
     "host/output/browse": "Browse...",
     "host/output/useInputDir": "Use original file location",
     "host/output/targetExtSuffixPrefix": "Target suffix:",
-    "host/output/namingTemplateTokenBaseText": "base",
+    "host/output/namingTemplateTokenBaseText": "original name",
     "host/output/namingTemplateTokenIndexText": "index",
     "host/output/namingTemplateTokenTimeDateText": "Date (yyyy-MM-dd)",
     "host/output/namingTemplateTokenTimeHmsText": "Time (HH-mm-ss)",
+    "host/output/namingTemplateCustom1Default": "Custom 1",
+    "host/output/namingTemplateCustom2Default": "Custom 2",
+    "host/output/namingTemplateCustom3Default": "Custom 3",
+    "host/output/namingTemplateCustomRowLabel": "Custom labels:",
+    "host/output/namingTemplateCustom1Watermark": "Label 1",
+    "host/output/namingTemplateCustom2Watermark": "Label 2",
+    "host/output/namingTemplateCustom3Watermark": "Label 3",
     "host/output/templateLabel": "Naming template"
     ,
     "host/process/progressLabel": "Progress"
@@ -45,8 +53,7 @@
     ,
     "host/process/parallelism": "Parallelism"
     ,
-    "host/output/templateHelp": "Click chips below to add or remove tags; drag selected tags to reorder. Tags are joined with underscores. The target extension is shown on the right."
-    ,
+    "host/output/templateHelp": "Click chips below to add or remove tags; drag selected tags to reorder. Tags are joined with underscores. If no tags are selected, the original filename will be used. The target extension is shown on the right. Custom tags can be renamed using the input fields below.",
     "host/pluginManager/title": "Plugin manager",
     "host/pluginManager/refresh": "Refresh",
     "host/pluginManager/add": "Add",

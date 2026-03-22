@@ -1,0 +1,25 @@
+{
+  "strings": {
+    "plugin/pandoc.document.transcoder/title": "Document Converter",
+    "plugin/pandoc.document.transcoder/description": "Convert between Markdown, Word, HTML, EPUB and many other document formats. PDF to images uses DtronixPdf (no Ghostscript; not Pandoc).",
+    "plugin/pandoc.document.transcoder/target/docx": "DOCX (Recommended, best compatibility)",
+    "plugin/pandoc.document.transcoder/target/doc": "DOC (Legacy Office format)",
+    "plugin/pandoc.document.transcoder/target/odt": "ODT (LibreOffice format)",
+    "plugin/pandoc.document.transcoder/target/html": "HTML (Web page)",
+    "plugin/pandoc.document.transcoder/target/epub": "EPUB (E-book format)",
+    "plugin/pandoc.document.transcoder/target/md": "Markdown (Lightweight markup)",
+    "plugin/pandoc.document.transcoder/target/txt": "TXT (Plain text)",
+    "plugin/pandoc.document.transcoder/target/rst": "RST (Technical docs)",
+    "plugin/pandoc.document.transcoder/target/typst": "Typst (Modern typesetting)",
+    "plugin/pandoc.document.transcoder/target/pdf": "PDF (Best for printing)",
+    "plugin/pandoc.document.transcoder/target/pngLong": "PNG (long image)",
+    "plugin/pandoc.document.transcoder/target/jpgLong": "JPG (long image)",
+    "plugin/pandoc.document.transcoder/target/zip": "ZIP (multi-page)",
+    "plugin/pandoc.document.transcoder/section/pdfImageOutput": "PDF to Image Settings",
+    "plugin/pandoc.document.transcoder/section/pdfImageOutputDesc": "Resolution applies to all PDF image targets. When the target is ZIP, choose PNG or JPG for each page inside the archive.",
+    "plugin/pandoc.document.transcoder/field/dpi": "Resolution (DPI)",
+    "plugin/pandoc.document.transcoder/field/zipImageFormat": "Image format inside ZIP",
+    "plugin/pandoc.document.transcoder/zipInner/png": "PNG",
+    "plugin/pandoc.document.transcoder/zipInner/jpg": "JPG"
+  }
+}
