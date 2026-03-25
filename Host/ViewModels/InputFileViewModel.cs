@@ -25,6 +25,8 @@ public sealed class InputFileViewModel : ObservableObject
     public TopLevel? TopLevel { get; set; }
 
     private readonly HashSet<string> _supportedExtensions;
+    private bool _batchMode = false;
+    private bool _batchChanged = false;
 
     public InputFileViewModel(IEnumerable<string> supportedExtensions)
     {
@@ -49,7 +51,15 @@ public sealed class InputFileViewModel : ObservableObject
     {
         RaisePropertyChanged(nameof(HasInputFiles));
         RaisePropertyChanged(nameof(HasNoInputFiles));
-        InputFilesChanged?.Invoke(this, EventArgs.Empty);
+        
+        if (_batchMode)
+        {
+            _batchChanged = true;
+        }
+        else
+        {
+            InputFilesChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     public void RemoveInputFile(InputFileItemVm item)
@@ -59,40 +69,54 @@ public sealed class InputFileViewModel : ObservableObject
 
     public void AddInputPaths(IEnumerable<string> paths)
     {
-        var unsupportedFiles = new List<string>();
-
-        foreach (var p in paths)
+        try
         {
-            var trimmed = (p ?? "").Trim();
-            if (string.IsNullOrWhiteSpace(trimmed))
+            _batchMode = true;
+            _batchChanged = false;
+            
+            var unsupportedFiles = new List<string>();
+
+            foreach (var p in paths)
             {
-                continue;
+                var trimmed = (p ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                {
+                    continue;
+                }
+
+                if (InputFiles.Any(x => string.Equals(x.FullPath, trimmed, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                var ext = Path.GetExtension(trimmed);
+                if (!string.IsNullOrEmpty(ext))
+                {
+                    ext = ext.TrimStart('.').ToLowerInvariant();
+                }
+
+                if (!string.IsNullOrEmpty(ext) && _supportedExtensions.Contains(ext))
+                {
+                    InputFiles.Add(new InputFileItemVm(trimmed, RemoveInputFile));
+                }
+                else
+                {
+                    unsupportedFiles.Add(Path.GetFileName(trimmed));
+                }
             }
 
-            if (InputFiles.Any(x => string.Equals(x.FullPath, trimmed, StringComparison.OrdinalIgnoreCase)))
+            if (unsupportedFiles.Count > 0)
             {
-                continue;
-            }
-
-            var ext = Path.GetExtension(trimmed);
-            if (!string.IsNullOrEmpty(ext))
-            {
-                ext = ext.TrimStart('.').ToLowerInvariant();
-            }
-
-            if (!string.IsNullOrEmpty(ext) && _supportedExtensions.Contains(ext))
-            {
-                InputFiles.Add(new InputFileItemVm(trimmed, RemoveInputFile));
-            }
-            else
-            {
-                unsupportedFiles.Add(Path.GetFileName(trimmed));
+                UnsupportedFormatDetected?.Invoke(this, new UnsupportedFormatEventArgs(unsupportedFiles));
             }
         }
-
-        if (unsupportedFiles.Count > 0)
+        finally
         {
-            UnsupportedFormatDetected?.Invoke(this, new UnsupportedFormatEventArgs(unsupportedFiles));
+            _batchMode = false;
+            if (_batchChanged)
+            {
+                InputFilesChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 

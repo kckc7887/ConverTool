@@ -33,7 +33,7 @@
 
 | 组件 | 版本 |
 |------|------|
-| Host | v1.1.0 |
+| Host | v1.2.0 |
 | PluginAbstractions | 1.1.0 |
 
 单元测试（`persistValue` 等）：`Host.Tests/`（`dotnet test Host.Tests/Host.Tests.csproj`）。

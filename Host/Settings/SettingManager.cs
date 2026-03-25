@@ -119,6 +119,9 @@ public static class SettingManager
             new() { Key = "EnableParallelProcessing", Value = false, Default = false },
             new() { Key = "Parallelism", Value = 2, Default = 2 },
             new() { Key = "KeepTemp", Value = false, Default = false },
+            new() { Key = "EnableContextMenu", Value = false, Default = false },
+            new() { Key = "AllowedSourceExtensions", Value = new List<string>(), Default = new List<string>() },
+            new() { Key = "AllowedTargetFormats", Value = new Dictionary<string, List<string>>(), Default = new Dictionary<string, List<string>>() },
             new() { Key = "Plugins", Value = new Dictionary<string, object>(), Default = new Dictionary<string, object>() }
         };
 
@@ -260,6 +263,9 @@ public static class SettingManager
             "EnableParallelProcessing" => false,
             "Parallelism" => 2,
             "KeepTemp" => false,
+            "EnableContextMenu" => false,
+            "AllowedSourceExtensions" => JsonSerializer.Deserialize<JsonElement>("[]", JsonOptions),
+            "AllowedTargetFormats" => JsonSerializer.Deserialize<JsonElement>("{}", JsonOptions),
             "Plugins" => JsonSerializer.Deserialize<JsonElement>("{}", JsonOptions),
             _ => null
         };

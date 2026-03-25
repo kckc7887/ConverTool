@@ -2,7 +2,7 @@
 
 > **目的**：以当前仓库代码为准，记录架构、数据流、算法与实现细节，便于维护、二次开发与问题定位。  
 > **范围**：Host（Avalonia）、与 `ConverTool.PluginAbstractions` 契约的交互、插件加载与执行、动态配置 UI、用户设置、批处理与进度、命名与落盘。  
-> **版本**：与 Host **v1.1.0**、`ConverTool.PluginAbstractions` **1.1.0** 及本仓库 manifest/schema 对齐；若代码变更，请以实际源码为准。  
+> **版本**：与 Host **v1.2.0**、`ConverTool.PluginAbstractions` **1.1.0** 及本仓库 manifest/schema 对齐；若代码变更，请以实际源码为准。
 > **契约库仓库**：`PluginAbstractions` 类型定义在**独立 Git 仓库**中发布（NuGet 包）；**不是**本 Host 仓库的一部分，见 **[../repositories.md](../repositories.md)**。
 
 ---

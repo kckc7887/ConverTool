@@ -1,6 +1,6 @@
 # ConverTool 插件开发规范
 
-> 文档版本：v1.1.0 | Host 版本：v1.1.0 | 契约包版本：1.1.0
+> 文档版本：v1.2.0 | Host 版本：v1.2.0 | 契约包版本：1.1.0
 
 本规范定义 ConverTool Host 与插件之间的协议。Host 通过 `manifest.json` 驱动 UI，插件实现 `IConverterPlugin` 接口完成转换。
 
@@ -584,4 +584,4 @@ Host 将 zip 解压到 `plugins/<pluginId>/`
 
 ---
 
-*文档版本与 Host **v1.1.0**、`ConverTool.PluginAbstractions` **1.1.0** 对齐；若 Host 行为升级，请以仓库内 `Host/PluginManifestModel.cs` 与 `MainWindowViewModel` 配置逻辑为准。*
+*文档版本与 Host **v1.2.0**、`ConverTool.PluginAbstractions` **1.1.0** 对齐；若 Host 行为升级，请以仓库内 `Host/PluginManifestModel.cs` 与 `MainWindowViewModel` 配置逻辑为准。*

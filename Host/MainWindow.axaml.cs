@@ -27,11 +27,11 @@ public partial class MainWindow : Window
         _vm = new MainWindowViewModel(AppServices.Plugins, AppServices.PluginI18n, AppServices.I18n);
         DataContext = _vm;
 
-        Opened += OnOpened;
+        Opened += (_, _) => OnOpened();
         Closing += (_, _) => _vm?.SaveUserSettingsNow();
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    private void OnOpened()
     {
         if (_vm is null)
         {
@@ -42,6 +42,18 @@ public partial class MainWindow : Window
         _vm.ShowErrorDialogAsync = ShowErrorDialogAsync;
         _vm.PropertyChanged += OnVmPropertyChanged;
     }
+    
+    public void AddInputPaths(string[] paths)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+        
+        _vm.AddInputPaths(paths);
+    }
+
+
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

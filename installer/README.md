@@ -29,7 +29,7 @@ powershell -ExecutionPolicy Bypass -File .\installer\scripts\verify-dev-setup.ps
 
 ## Output
 
-- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.1.0` 时对应 `ConverTool-v1.1.0-setup.exe`）
+- `artifacts/ConverTool-v<版本>-setup.exe`（例如与 `AppVersion` 为 `1.2.0` 时对应 `ConverTool-v1.2.0-setup.exe`）
 - 若还需打 **full/lite 便携 zip**（在已执行 `build-installer.ps1` 生成 `artifacts/host/v<版本>/...` 之后）：
 
 ```powershell

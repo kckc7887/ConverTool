@@ -1,6 +1,6 @@
 {
   "pluginId": "imagemagick.image.transcoder",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "author": "Chnynnya",
   "assembly": "ImageMagickImageTranscoder.dll",
   "type": "ImageMagickImageTranscoder.ImageMagickImageTranscoderPlugin",

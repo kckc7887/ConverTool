@@ -47,8 +47,25 @@ public static class ServiceLocator
         _pluginCatalog = PluginCatalog.LoadFromOutput(baseDir);
     }
 
+    /// <summary>
+    /// Returns the current <see cref="PluginCatalog"/> instance (may change after <see cref="ReloadPluginCatalog"/>).
+    /// </summary>
+    public static PluginCatalog GetPluginCatalog()
+    {
+        if (_pluginCatalog is null)
+            throw new InvalidOperationException("ServiceLocator not initialized. Call Initialize first.");
+        return _pluginCatalog;
+    }
+
     public static T GetService<T>() where T : class
     {
+        // PluginCatalog is reloaded by replacing the backing field; the DI singleton would otherwise keep
+        // returning the original instance and make plugin installs require restart.
+        if (typeof(T) == typeof(PluginCatalog))
+        {
+            return (T)(object)GetPluginCatalog();
+        }
+
         return Provider.GetRequiredService<T>();
     }
 

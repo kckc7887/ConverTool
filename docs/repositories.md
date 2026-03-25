@@ -28,7 +28,7 @@
 | 项 | 说明 |
 |----|------|
 | **包 ID** | `ConverTool.PluginAbstractions` |
-| **当前版本** | 1.1.0（与 Host **v1.1.0** 发行线对齐） |
+| **当前版本** | 1.1.0（与 Host **v1.2.0** 发行线对齐） |
 | **用途** | 插件工程引用后实现 `IConverterPlugin` 等；版本需与目标 Host 文档中声明的契约版本一致。 |
 | **获取方式** | 以团队发布为准：公共源（如 nuget.org）、GitHub Packages、或 Release 中的 `.nupkg`。 |
 

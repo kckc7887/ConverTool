@@ -32,6 +32,7 @@ public sealed class MainWindowViewModel : ObservableObject
         nameof(EnableParallelProcessing),
         nameof(Parallelism),
         nameof(KeepTemp),
+        nameof(EnableContextMenu),
         nameof(SelectedTargetFormat),
     };
 
@@ -138,6 +139,9 @@ public sealed class MainWindowViewModel : ObservableObject
             EnableParallelProcessing = SettingManager.GetValue<bool>(_settings, "EnableParallelProcessing"),
             Parallelism = SettingManager.GetValue<int>(_settings, "Parallelism"),
             KeepTemp = SettingManager.GetValue<bool>(_settings, "KeepTemp"),
+            EnableContextMenu = SettingManager.GetValue<bool>(_settings, "EnableContextMenu"),
+            AllowedSourceExtensions = SettingManager.GetValue<List<string>>(_settings, "AllowedSourceExtensions"),
+            AllowedTargetFormats = SettingManager.GetValue<Dictionary<string, List<string>>>(_settings, "AllowedTargetFormats"),
             Plugins = SettingManager.GetValue<Dictionary<string, PluginUserSettings>>(_settings, "Plugins")
         };
 
@@ -207,10 +211,19 @@ public sealed class MainWindowViewModel : ObservableObject
             EnableParallelProcessing = _userSettings.EnableParallelProcessing ?? false;
             Parallelism = _userSettings.Parallelism ?? 0;
             KeepTemp = _userSettings.KeepTemp ?? false;
+            EnableContextMenu = _userSettings.EnableContextMenu ?? false;
+            AllowedSourceExtensions = _userSettings.AllowedSourceExtensions ?? new List<string>();
+            AllowedTargetFormats = _userSettings.AllowedTargetFormats ?? new Dictionary<string, List<string>>();
         }
         finally
         {
             _loadingUserSettings = false;
+        }
+
+        // 更新右键菜单状态
+        if (EnableContextMenu)
+        {
+            UpdateContextMenu();
         }
 
         _namingTemplateViewModel.Initialize(_namingTemplateViewModel.NamingTemplate);
@@ -228,6 +241,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _namingTemplateViewModel.ToggleNamingTemplateCandidate(v ?? "");
             return Task.CompletedTask;
         });
+        SaveSettingsCommand = new SyncCommand(SaveSettings);
 
         _hostI18n.LocaleChanged += (_, _) => ReloadHostStrings();
         PropertyChanged += OnVmPersistablePropertyChanged;
@@ -413,6 +427,83 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _keepTemp;
     public bool KeepTemp { get => _keepTemp; set => SetProperty(ref _keepTemp, value); }
 
+    private bool _enableContextMenu;
+    public bool EnableContextMenu 
+    {
+        get => _enableContextMenu;
+        set 
+        { 
+            if (SetProperty(ref _enableContextMenu, value))
+            {
+                if (!_loadingUserSettings)
+                {
+                    _userSettings.EnableContextMenu = value;
+                    UpdateContextMenu();
+                    ScheduleSaveUserSettings();
+                }
+            }
+        }
+    }
+
+    private List<string> _allowedSourceExtensions = new();
+    public List<string> AllowedSourceExtensions 
+    {
+        get => _allowedSourceExtensions;
+        set 
+        { 
+            // 比较列表内容是否真正改变
+            bool contentChanged = !ListsAreEqual(_allowedSourceExtensions, value);
+            if (contentChanged && SetProperty(ref _allowedSourceExtensions, value))
+            {
+                if (!_loadingUserSettings)
+                {
+                    _userSettings.AllowedSourceExtensions = value;
+                    if (_enableContextMenu)
+                    {
+                        UpdateContextMenu();
+                    }
+                    ScheduleSaveUserSettings();
+                }
+            }
+        }
+    }
+    
+    private bool ListsAreEqual(List<string>? list1, List<string>? list2)
+    {
+        if (list1 == list2) return true;
+        if (list1 == null || list2 == null) return false;
+        if (list1.Count != list2.Count) return false;
+        
+        // 排序后比较
+        var sortedList1 = list1.OrderBy(s => s).ToList();
+        var sortedList2 = list2.OrderBy(s => s).ToList();
+        
+        for (int i = 0; i < sortedList1.Count; i++)
+        {
+            if (sortedList1[i] != sortedList2[i])
+                return false;
+        }
+        
+        return true;
+    }
+
+    private Dictionary<string, List<string>> _allowedTargetFormats = new();
+    public Dictionary<string, List<string>> AllowedTargetFormats 
+    {
+        get => _allowedTargetFormats;
+        set 
+        { 
+            if (SetProperty(ref _allowedTargetFormats, value))
+            {
+                if (!_loadingUserSettings)
+                {
+                    _userSettings.AllowedTargetFormats = value;
+                    ScheduleSaveUserSettings();
+                }
+            }
+        }
+    }
+
     // ---- plugin-driven UI ----
     public ObservableCollection<TargetFormatVm> TargetFormats { get; } = new();
 
@@ -523,6 +614,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncCommand StopCommand { get; }
     public AsyncCommand AddPluginCommand { get; }
     public AsyncCommand<string> AddNamingTemplateTokenCommand { get; }
+    public ICommand SaveSettingsCommand { get; }
 
     // Host will set this from code-behind (TopLevel required for picker).
     public TopLevel? TopLevel
@@ -856,6 +948,9 @@ public sealed class MainWindowViewModel : ObservableObject
             SettingManager.SetValue(_settings, "EnableParallelProcessing", _userSettings.EnableParallelProcessing);
             SettingManager.SetValue(_settings, "Parallelism", _userSettings.Parallelism);
             SettingManager.SetValue(_settings, "KeepTemp", _userSettings.KeepTemp);
+            SettingManager.SetValue(_settings, "EnableContextMenu", _userSettings.EnableContextMenu);
+            SettingManager.SetValue(_settings, "AllowedSourceExtensions", _userSettings.AllowedSourceExtensions);
+            SettingManager.SetValue(_settings, "AllowedTargetFormats", _userSettings.AllowedTargetFormats);
             SettingManager.SetValue(_settings, "Plugins", _userSettings.Plugins);
 
             SettingManager.SaveHostSettings(_settings);
@@ -866,6 +961,21 @@ public sealed class MainWindowViewModel : ObservableObject
         catch
         {
             // best effort
+        }
+    }
+
+    private void UpdateContextMenu()
+    {
+        try
+        {
+            Host.Services.ContextMenuManager.UpdateContextMenu(
+                _enableContextMenu, 
+                _allowedSourceExtensions, 
+                _catalog);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating context menu: {ex.Message}");
         }
     }
 
@@ -2055,6 +2165,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var allSupportedExtensions = GetAllSupportedExtensions(_catalog);
         _inputFileViewModel.UpdateSupportedExtensions(allSupportedExtensions);
+
+        // If context menu integration is enabled, ensure it reflects the latest plugin set immediately.
+        if (EnableContextMenu)
+        {
+            UpdateContextMenu();
+        }
 
         ReloadPluginContext();
     }

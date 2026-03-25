@@ -10,6 +10,9 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="avares://Host/Assets/convertool-icon.ico"
         Title="{Binding HostTitle}">
+    <Window.Resources>
+        <vm:ListToStringConverter x:Key="ListToStringConverter" />
+    </Window.Resources>
     <DockPanel Margin="{DynamicResource PagePadding}" LastChildFill="True" PointerPressed="OnRootPointerPressed">
         <!-- 顶部栏：标题 + 操作区 -->
         <Border DockPanel.Dock="Top" Padding="0,0,0,20" Margin="0,0,0,8"
@@ -387,6 +390,19 @@
                                                Text="{Binding NamingTemplateHelp}" />
                                     <CheckBox Content="{Binding KeepTempLabel}" IsChecked="{Binding KeepTemp}"
                                               IsEnabled="{Binding CanEdit}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- 右键菜单设置 -->
+                    <StackPanel Spacing="10">
+                        <TextBlock FontWeight="SemiBold" FontSize="16" Text="右键菜单设置"
+                                   Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}" />
+                        <Border Classes="card" HorizontalAlignment="Stretch">
+                            <StackPanel Spacing="14">
+                                <StackPanel Spacing="12" IsEnabled="{Binding CanEdit}">
+                                    <CheckBox Content="启用右键菜单集成" IsChecked="{Binding EnableContextMenu}" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>

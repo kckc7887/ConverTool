@@ -86,6 +86,15 @@ public sealed class UserSettingsFile
 
     /// <summary>pluginId -> saved UI state</summary>
     public Dictionary<string, PluginUserSettings>? Plugins { get; set; }
+
+    /// <summary>Enable context menu integration</summary>
+    public bool? EnableContextMenu { get; set; }
+
+    /// <summary>Allowed source extensions for context menu</summary>
+    public List<string>? AllowedSourceExtensions { get; set; }
+
+    /// <summary>Allowed target formats for context menu</summary>
+    public Dictionary<string, List<string>>? AllowedTargetFormats { get; set; }
 }
 
 public sealed class PluginUserSettings
