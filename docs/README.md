@@ -1,6 +1,6 @@
 # ConverTool
 
-> **当前主线版本：Host v1.2.1**（契约包 `ConverTool.PluginAbstractions` **1.1.0**；内置插件的 manifest `version` 与 Host 一致，见 [`plugin-dev.md`](plugin-dev.md)；历史版本说明见 [`docs/releases/`](releases/)。）
+> **当前主线版本：Host v1.2.2**（契约包 `ConverTool.PluginAbstractions` **1.1.0**；内置插件的 manifest `version` 与 Host 一致，见 [`plugin-dev.md`](plugin-dev.md)；历史版本说明见 [`docs/releases/`](releases/)。）
 
 ConverTool 是一个"轻量化的跨平台文件转换器骨架"：它用 Avalonia 做 UI，并通过动态加载的插件（.NET DLL）来完成真正的转换逻辑。Host 负责把输入文件路由到对应插件、提供配置 UI、创建临时目录、接收插件日志/进度/完成信息，并将临时产物按命名模板移动到最终输出目录。
 

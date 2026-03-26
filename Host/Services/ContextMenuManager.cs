@@ -171,22 +171,32 @@ namespace Host.Services
         
         private static string GetExePath()
         {
+            // In packaged builds we rename Host.exe -> ConverTool.exe, so the EntryAssembly
+            // often points to Host.dll. Prefer explicit exe names under BaseDirectory.
+            var baseDir = AppContext.BaseDirectory;
+            if (!string.IsNullOrWhiteSpace(baseDir))
+            {
+                var converToolExe = Path.Combine(baseDir, "ConverTool.exe");
+                if (File.Exists(converToolExe))
+                    return converToolExe;
+
+                var hostExe = Path.Combine(baseDir, "Host.exe");
+                if (File.Exists(hostExe))
+                    return hostExe;
+            }
+
             string? entryAssemblyPath = System.Reflection.Assembly.GetEntryAssembly()?.Location;
             if (string.IsNullOrEmpty(entryAssemblyPath))
-            {
                 return string.Empty;
-            }
-            
-            // 如果路径是DLL文件，尝试找到对应的EXE文件
+
+            // If the entry is a DLL file, try to find a sibling EXE (dev layouts).
             if (entryAssemblyPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
             {
                 string exePath = Path.ChangeExtension(entryAssemblyPath, ".exe");
                 if (File.Exists(exePath))
-                {
                     return exePath;
-                }
             }
-            
+
             return entryAssemblyPath;
         }
         
