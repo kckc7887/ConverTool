@@ -1,6 +1,6 @@
 {
   "pluginId": "ffmpeg.video.transcoder",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "Chnynnya",
   "assembly": "FfmpegVideoTranscoder.dll",
   "type": "FfmpegVideoTranscoder.VideoTranscoderPlugin",

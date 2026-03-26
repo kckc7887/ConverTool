@@ -10,7 +10,6 @@ namespace Host.Services
     public class ContextMenuManager
     {
         private const string ConverToolKey = "ConverTool";
-        private const string CommandName = "Convert with ConverTool";
         private const string UserClassesRootPath = @"Software\Classes";
 
         private static RegistryKey? OpenUserClassesRootWritable()
@@ -109,7 +108,7 @@ namespace Host.Services
             using (RegistryKey? extKey = root.CreateSubKey(extKeyPath))
             {
                 if (extKey is null) return;
-                extKey.SetValue(string.Empty, CommandName);
+                extKey.SetValue(string.Empty, GetCommandName());
                 // 多选时尽量只调用一次，并把所有选中项作为一个集合传入
                 // 参考：Windows Shell Verb Selection Model
                 extKey.SetValue("MultiSelectModel", "Player");
@@ -135,7 +134,7 @@ namespace Host.Services
             using (RegistryKey? allFilesKey = root.CreateSubKey(allFilesKeyPath))
             {
                 if (allFilesKey is null) return;
-                allFilesKey.SetValue(string.Empty, CommandName);
+                allFilesKey.SetValue(string.Empty, GetCommandName());
                 // 多选时尽量只调用一次，并把所有选中项作为一个集合传入
                 allFilesKey.SetValue("MultiSelectModel", "Player");
                 // 显式删除Extended值，使右键菜单始终显示
@@ -151,6 +150,23 @@ namespace Host.Services
                     }
                 }
             }
+        }
+        
+        private static string GetCommandName()
+        {
+            try
+            {
+                var i18nService = Host.AppServices.I18n;
+                if (i18nService != null && i18nService.Locale.StartsWith("zh"))
+                {
+                    return "使用ConverTool转换";
+                }
+            }
+            catch
+            {
+                // 出错时使用默认值
+            }
+            return "Convert with ConverTool";
         }
         
         private static string GetExePath()

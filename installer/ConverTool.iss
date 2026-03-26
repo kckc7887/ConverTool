@@ -1,5 +1,5 @@
 #define AppName "ConverTool"
-#define AppVersion "1.2.0"
+#define AppVersion "1.2.1"
 #define AppPublisher "ConverTool"
 #define AppExeName "ConverTool.exe"
 

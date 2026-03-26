@@ -1,7 +1,7 @@
 # After installer/scripts/build-installer.ps1, create portable zips under artifacts/ with release naming.
 param(
     [Parameter(Mandatory = $false)]
-    [string]$Version = "1.2.0"
+    [string]$Version = "1.2.1"
 )
 
 $ErrorActionPreference = "Stop"
